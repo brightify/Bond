@@ -271,7 +271,7 @@ public extension Observable
     return _map(self) { ($0, v) }
   }
   
-  public func zip<U>(d: Dynamic<U>) -> Observable<(T, U)> {
+  public func zip<U>(d: Observable<U>) -> Observable<(T, U)> {
     return reduce(self, d) { ($0, $1) }
   }
   
