@@ -33,7 +33,7 @@ class BondPerformanceTests: XCTestCase {
 
       // Test
       self.startMeasuring()
-      intBond.unbindAll()
+      intBond.unbind()
       self.stopMeasuring()
 
     }

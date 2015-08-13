@@ -64,7 +64,7 @@ class TextFieldDynamic<T>: InternalDynamic<String>
 private var textDynamicHandleUITextField: UInt8 = 0;
 private var enabledDynamicHandleUITextField: UInt8 = 0;
 
-extension UITextField /*: Dynamical, Bondable */ {
+extension UITextField: Dynamical, Bondable, ObservableType {
   
   public var dynText: Dynamic<String> {
     if let d: AnyObject = objc_getAssociatedObject(self, &textDynamicHandleUITextField) {
@@ -96,6 +96,10 @@ extension UITextField /*: Dynamical, Bondable */ {
     }
   }
 
+  public var designatedObservable: Observable<String> {
+    return designatedDynamic
+  }
+  
   public var designatedDynamic: Dynamic<String> {
     return self.dynText
   }
@@ -106,23 +110,23 @@ extension UITextField /*: Dynamical, Bondable */ {
 }
 
 public func ->> (left: UITextField, right: Bond<String>) {
-  left.designatedDynamic ->> right
+  left.designatedObservable ->> right
 }
 
 public func ->> <U: Bondable where U.BondType == String>(left: UITextField, right: U) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> (left: UITextField, right: UITextField) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> (left: UITextField, right: UILabel) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> (left: UITextField, right: UITextView) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> <T: Dynamical where T.DynamicType == String>(left: T, right: UITextField) {

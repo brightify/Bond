@@ -29,19 +29,18 @@ import QuartzCore
 
 // MARK: Map
 
-public func map<T, U>(dynamic: Dynamic<T>, f: T -> U) -> Dynamic<U> {
-  return _map(dynamic, f)
+public func map<T, U>(observable: Observable<T>, f: T -> U) -> Observable<U> {
+  return _map(observable, f)
 }
 
-public func map<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, f: T -> U) -> Dynamic<U> {
+public func map<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, f: T -> U) -> Observable<U> {
   return _map(dynamical.designatedDynamic, f)
 }
 
-internal func _map<T, U>(dynamic: Dynamic<T>, f: T -> U) -> Dynamic<U> {
-  
+internal func _map<T, U>(observable: Observable<T>, f: T -> U) -> Observable<U> {
   let dyn = InternalDynamic<U>()
   
-  if let value = dynamic._value {
+  if let value = observable.backingValue {
     dyn.value = f(value)
   }
   
@@ -50,30 +49,29 @@ internal func _map<T, U>(dynamic: Dynamic<T>, f: T -> U) -> Dynamic<U> {
   }
   
   dyn.retain(bond)
-  dynamic.bindTo(bond, fire: false)
+  observable.bindTo(bond, fire: false)
   
   return dyn
 }
 
 // MARK: Filter
 
-public func filter<T>(dynamic: Dynamic<T>, f: T -> Bool) -> Dynamic<T> {
-  return _filter(dynamic, f)
+public func filter<T>(observable: Observable<T>, f: T -> Bool) -> Observable<T> {
+  return _filter(observable, f)
 }
 
-public func filter<T>(dynamic: Dynamic<T>, f: (T, T) -> Bool, v: T) -> Dynamic<T> {
-  return _filter(dynamic) { f($0, v) }
+public func filter<T>(observable: Observable<T>, f: (T, T) -> Bool, v: T) -> Observable<T> {
+  return _filter(observable) { f($0, v) }
 }
 
-public func filter<S: Dynamical, T where S.DynamicType == T>(dynamical: S, f: T -> Bool) -> Dynamic<T> {
+public func filter<S: Dynamical, T where S.DynamicType == T>(dynamical: S, f: T -> Bool) -> Observable<T> {
   return _filter(dynamical.designatedDynamic, f)
 }
 
-internal func _filter<T>(dynamic: Dynamic<T>, f: T -> Bool) -> Dynamic<T> {
-  
+internal func _filter<T>(observable: Observable<T>, f: T -> Bool) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
-  if let value = dynamic._value {
+  if let value = observable.backingValue {
     if f(value) {
       dyn.value = value
     }
@@ -86,42 +84,42 @@ internal func _filter<T>(dynamic: Dynamic<T>, f: T -> Bool) -> Dynamic<T> {
   }
   
   dyn.retain(bond)
-  dynamic.bindTo(bond, fire: false)
+  observable.bindTo(bond, fire: false)
   
   return dyn
 }
 
 // MARK: Reduce
 
-public func reduce<A, B, T>(dA: Dynamic<A>, dB: Dynamic<B>, f: (A, B) -> T) -> Dynamic<T> {
-  return _reduce(dA, dB, f)
+public func reduce<A, B, T>(oA: Observable<A>, oB: Observable<B>, f: (A, B) -> T) -> Observable<T> {
+  return _reduce(oA, oB, f)
 }
 
-public func reduce<A, B, C, T>(dA: Dynamic<A>, dB: Dynamic<B>, dC: Dynamic<C>, f: (A, B, C) -> T) -> Dynamic<T> {
-  return _reduce(dA, dB, dC, f)
+public func reduce<A, B, C, T>(oA: Observable<A>, oB: Observable<B>, oC: Observable<C>, f: (A, B, C) -> T) -> Observable<T> {
+  return _reduce(oA, oB, oC, f)
 }
 
-public func _reduce<A, B, T>(dA: Dynamic<A>, dB: Dynamic<B>, f: (A, B) -> T) -> Dynamic<T> {
+public func _reduce<A, B, T>(oA: Observable<A>, oB: Observable<B>, f: (A, B) -> T) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
-  if let vA = dA._value, let vB = dB._value {
+  if let vA = oA.backingValue, let vB = oB.backingValue {
     dyn.value = f(vA, vB)
   }
   
-  let bA = Bond<A> { [unowned dyn, weak dB] in
-    if let vB = dB?._value {
+  let bA = Bond<A> { [unowned dyn, weak oB] in
+    if let vB = oB?.backingValue {
       dyn.value = f($0, vB)
     }
   }
   
-  let bB = Bond<B> { [unowned dyn, weak dA] in
-    if let vA = dA?._value {
+  let bB = Bond<B> { [unowned dyn, weak oA] in
+    if let vA = oA?.backingValue {
       dyn.value = f(vA, $0)
     }
   }
   
-  dA.bindTo(bA, fire: false)
-  dB.bindTo(bB, fire: false)
+  oA.bindTo(bA, fire: false)
+  oB.bindTo(bB, fire: false)
   
   dyn.retain(bA)
   dyn.retain(bB)
@@ -129,28 +127,28 @@ public func _reduce<A, B, T>(dA: Dynamic<A>, dB: Dynamic<B>, f: (A, B) -> T) -> 
   return dyn
 }
 
-internal func _reduce<A, B, C, T>(dA: Dynamic<A>, dB: Dynamic<B>, dC: Dynamic<C>, f: (A, B, C) -> T) -> Dynamic<T> {
+internal func _reduce<A, B, C, T>(oA: Observable<A>, oB: Observable<B>, oC: Observable<C>, f: (A, B, C) -> T) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
-  if let vA = dA._value, let vB = dB._value, let vC = dC._value {
+  if let vA = oA.backingValue, let vB = oB.backingValue, let vC = oC.backingValue {
     dyn.value = f(vA, vB, vC)
   }
   
-  let bA = Bond<A> { [unowned dyn, weak dB, weak dC] in
-    if let vB = dB?._value, let vC = dC?._value { dyn.value = f($0, vB, vC) }
+  let bA = Bond<A> { [unowned dyn, weak oB, weak oC] in
+    if let vB = oB?.backingValue, let vC = oC?.backingValue { dyn.value = f($0, vB, vC) }
   }
   
-  let bB = Bond<B> { [unowned dyn, weak dA, weak dC] in
-    if let vA = dA?._value, let vC = dC?._value { dyn.value = f(vA, $0, vC) }
+  let bB = Bond<B> { [unowned dyn, weak oA, weak oC] in
+    if let vA = oA?.backingValue, let vC = oC?.backingValue { dyn.value = f(vA, $0, vC) }
   }
   
-  let bC = Bond<C> { [unowned dyn, weak dA, weak dB] in
-    if let vA = dA?._value, let vB = dB?._value { dyn.value = f(vA, vB, $0) }
+  let bC = Bond<C> { [unowned dyn, weak oA, weak oB] in
+    if let vA = oA?.backingValue, let vB = oB?.backingValue { dyn.value = f(vA, vB, $0) }
   }
   
-  dA.bindTo(bA, fire: false)
-  dB.bindTo(bB, fire: false)
-  dC.bindTo(bC, fire: false)
+  oA.bindTo(bA, fire: false)
+  oB.bindTo(bB, fire: false)
+  oC.bindTo(bC, fire: false)
   
   dyn.retain(bA)
   dyn.retain(bB)
@@ -161,27 +159,27 @@ internal func _reduce<A, B, C, T>(dA: Dynamic<A>, dB: Dynamic<B>, dC: Dynamic<C>
 
 // MARK: Rewrite
 
-public func rewrite<T, U>(dynamic: Dynamic<T>, value: U) -> Dynamic<U> {
-  return _map(dynamic) { _ in value }
+public func rewrite<T, U>(observable: Observable<T>, value: U) -> Observable<U> {
+  return _map(observable) { _ in value }
 }
 
 // MARK: Zip
 
-public func zip<T, U>(dynamic: Dynamic<T>, value: U) -> Dynamic<(T, U)> {
-  return _map(dynamic) { ($0, value) }
+public func zip<T, U>(observable: Observable<T>, value: U) -> Observable<(T, U)> {
+  return _map(observable) { ($0, value) }
 }
 
-public func zip<T, U>(d1: Dynamic<T>, d2: Dynamic<U>) -> Dynamic<(T, U)> {
-  return reduce(d1, d2) { ($0, $1) }
+public func zip<T, U>(o1: Observable<T>, o2: Observable<U>) -> Observable<(T, U)> {
+  return reduce(o1, o2) { ($0, $1) }
 }
 
 // MARK: Skip
 
-internal func _skip<T>(dynamic: Dynamic<T>, var count: Int) -> Dynamic<T> {
+internal func _skip<T>(observable: Observable<T>, var count: Int) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
   if count <= 0 {
-    dyn.value = dynamic.value
+    dyn.value = observable.value
   }
   
   let bond = Bond<T> { [unowned dyn] t in
@@ -193,25 +191,25 @@ internal func _skip<T>(dynamic: Dynamic<T>, var count: Int) -> Dynamic<T> {
   }
   
   dyn.retain(bond)
-  dynamic.bindTo(bond, fire: false)
+  observable.bindTo(bond, fire: false)
   
   return dyn
 }
 
-public func skip<T>(dynamic: Dynamic<T>, count: Int) -> Dynamic<T> {
-  return _skip(dynamic, count)
+public func skip<T>(observable: Observable<T>, count: Int) -> Observable<T> {
+  return _skip(observable, count)
 }
 
 // MARK: Any
 
-public func any<T>(dynamics: [Dynamic<T>]) -> Dynamic<T> {  
+public func any<T>(observables: [Observable<T>]) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
-  for dynamic in dynamics {
-    let bond = Bond<T> { [unowned dynamic] in
+  for observable in observables {
+    let bond = Bond<T> { [unowned observable] in
       dyn.value = $0
     }
-    dynamic.bindTo(bond, fire: false)
+    observable.bindTo(bond, fire: false)
     dyn.retain(bond)
   }
   
@@ -220,7 +218,7 @@ public func any<T>(dynamics: [Dynamic<T>]) -> Dynamic<T> {
 
 // MARK: Throttle
 
-internal func _throttle<T>(dynamic: Dynamic<T>, seconds: Double, queue: dispatch_queue_t) -> Dynamic<T> {
+internal func _throttle<T>(observable: Observable<T>, seconds: Double, queue: dispatch_queue_t) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   var shouldDispatch: Bool = true
   
@@ -228,9 +226,9 @@ internal func _throttle<T>(dynamic: Dynamic<T>, seconds: Double, queue: dispatch
     if shouldDispatch {
       shouldDispatch = false
       let delay = dispatch_time(DISPATCH_TIME_NOW, Int64(seconds * Double(NSEC_PER_SEC)))
-      dispatch_after(delay, queue) { [weak dyn, weak dynamic] in
-        if let dyn = dyn, dynamic = dynamic {
-          dyn.value = dynamic.value
+      dispatch_after(delay, queue) { [weak dyn, weak observable] in
+        if let dyn = dyn, observable = observable {
+          dyn.value = observable.value
         }
         shouldDispatch = true
       }
@@ -238,21 +236,21 @@ internal func _throttle<T>(dynamic: Dynamic<T>, seconds: Double, queue: dispatch
   }
   
   dyn.retain(bond)
-  dynamic.bindTo(bond, fire: false)
+  observable.bindTo(bond, fire: false)
   
   return dyn
 }
 
-public func throttle<T>(dynamic: Dynamic<T>, seconds: Double, queue: dispatch_queue_t = dispatch_get_main_queue()) -> Dynamic<T> {
-    return _throttle(dynamic, seconds, queue)
+public func throttle<T>(observable: Observable<T>, seconds: Double, queue: dispatch_queue_t = dispatch_get_main_queue()) -> Observable<T> {
+    return _throttle(observable, seconds, queue)
 }
 
 // MARK: deliverOn
 
-internal func _deliver<T>(dynamic: Dynamic<T>, on queue: dispatch_queue_t) -> Dynamic<T> {
+internal func _deliver<T>(observable: Observable<T>, on queue: dispatch_queue_t) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
-  if let value = dynamic._value {
+  if let value = observable.backingValue {
     dyn.value = value
   }
   
@@ -263,19 +261,19 @@ internal func _deliver<T>(dynamic: Dynamic<T>, on queue: dispatch_queue_t) -> Dy
   }
   
   dyn.retain(bond)
-  dynamic.bindTo(bond, fire: false)
+  observable.bindTo(bond, fire: false)
   
   return dyn
 }
 
-public func deliver<T>(dynamic: Dynamic<T>, on queue: dispatch_queue_t) -> Dynamic<T> {
-  return _deliver(dynamic, on: queue)
+public func deliver<T>(observable: Observable<T>, on queue: dispatch_queue_t) -> Observable<T> {
+  return _deliver(observable, on: queue)
 }
 
 // MARK: Distinct
 
-internal func _distinct<T: Equatable>(dynamic: Dynamic<T>) -> Dynamic<T> {
-  let dyn = InternalDynamic<T>(dynamic.value)
+internal func _distinct<T: Equatable>(observable: Observable<T>) -> Observable<T> {
+  let dyn = InternalDynamic<T>(observable.value)
 
   let bond = Bond<T> { [weak dyn] v in
     if v != dyn?.value {
@@ -284,11 +282,11 @@ internal func _distinct<T: Equatable>(dynamic: Dynamic<T>) -> Dynamic<T> {
   }
 
   dyn.retain(bond)
-  dynamic.bindTo(bond, fire: false)
+  observable.bindTo(bond, fire: false)
 
   return dyn
 }
 
-public func distinct<T: Equatable>(dynamic: Dynamic<T>) -> Dynamic<T> {
-  return _distinct(dynamic)
+public func distinct<T: Equatable>(observable: Observable<T>) -> Observable<T> {
+  return _distinct(observable)
 }

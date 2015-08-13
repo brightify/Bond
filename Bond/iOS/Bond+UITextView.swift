@@ -30,7 +30,7 @@ import UIKit
 private var textDynamicHandleUITextView: UInt8 = 0;
 private var attributedTextDynamicHandleUITextView: UInt8 = 0;
 
-extension UITextView: Bondable {
+extension UITextView: Bondable, Dynamical, ObservableType {
   
   public var dynText: Dynamic<String> {
     if let d: AnyObject = objc_getAssociatedObject(self, &textDynamicHandleUITextView) {
@@ -45,8 +45,8 @@ extension UITextView: Bondable {
         }
       }
       
-      let bond = Bond<String>() { [weak self, weak d] v in
-        if let s = self, d = d where !d.updatingFromSelf {
+      let bond = Bond<String>() { [weak self] v in
+        if let s = self {
           s.text = v
         }
       }
@@ -71,8 +71,8 @@ extension UITextView: Bondable {
         }
       }
       
-      let bond = Bond<NSAttributedString>() { [weak self, weak d] v in
-        if let s = self, d = d where !d.updatingFromSelf {
+      let bond = Bond<NSAttributedString>() { [weak self] v in
+        if let s = self {
           s.attributedText = v
         }
       }
@@ -84,33 +84,37 @@ extension UITextView: Bondable {
     }
   }
   
+  public var designatedObservable: Observable<String> {
+    return designatedDynamic
+  }
+  
   public var designatedDynamic: Dynamic<String> {
-    return self.dynText
+    return dynText
   }
   
   public var designatedBond: Bond<String> {
-    return self.dynText.valueBond
+    return dynText.valueBond
   }
 }
 
 public func ->> (left: UITextView, right: Bond<String>) {
-  left.designatedDynamic ->> right
+  left.designatedObservable ->> right
 }
 
 public func ->> <U: Bondable where U.BondType == String>(left: UITextView, right: U) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> (left: UITextView, right: UITextView) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> (left: UITextView, right: UILabel) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> (left: UITextView, right: UITextField) {
-  left.designatedDynamic ->> right.designatedBond
+  left.designatedObservable ->> right.designatedBond
 }
 
 public func ->> <T: Dynamical where T.DynamicType == String>(left: T, right: UITextView) {

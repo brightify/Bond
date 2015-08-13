@@ -38,24 +38,24 @@ extension NSIndexSet {
 }
 
 @objc class TableViewDynamicArrayDataSource: NSObject, UITableViewDataSource {
-  weak var dynamic: DynamicArray<DynamicArray<UITableViewCell>>?
+  weak var observable: ObservableArray<ObservableArray<UITableViewCell>>?
   @objc weak var nextDataSource: UITableViewDataSource?
   
-  init(dynamic: DynamicArray<DynamicArray<UITableViewCell>>) {
-    self.dynamic = dynamic
+  init(observable: ObservableArray<ObservableArray<UITableViewCell>>) {
+    self.observable = observable
     super.init()
   }
   
   func numberOfSectionsInTableView(tableView: UITableView) -> Int {
-    return self.dynamic?.count ?? 0
+    return observable?.count ?? 0
   }
   
   func tableView(tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-    return self.dynamic?[section].count ?? 0
+    return observable?[section].count ?? 0
   }
   
   func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-    return self.dynamic?[indexPath.section][indexPath.item] ?? UITableViewCell()
+    return observable?[indexPath.section][indexPath.item] ?? UITableViewCell()
   }
   
   // Forwards
@@ -167,11 +167,11 @@ private class UITableViewDataSourceSectionBond<T>: ArrayBond<UITableViewCell> {
   }
   
   deinit {
-    self.unbindAll()
+    unbind()
   }
 }
 
-public class UITableViewDataSourceBond<T>: ArrayBond<DynamicArray<UITableViewCell>> {
+public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableViewCell>> {
   weak var tableView: UITableView?
   private var dataSource: TableViewDynamicArrayDataSource?
   private var sectionBonds: [UITableViewDataSourceSectionBond<Void>] = []
@@ -196,8 +196,8 @@ public class UITableViewDataSourceBond<T>: ArrayBond<DynamicArray<UITableViewCel
             
             for section in sorted(i, <) {
               let sectionBond = UITableViewDataSourceSectionBond<Void>(tableView: tableView, section: section, disableAnimation: disableAnimation)
-              let sectionDynamic = array[section]
-              sectionDynamic.bindTo(sectionBond)
+              let sectionObservable = array[section]
+              sectionObservable.bindTo(sectionBond)
               s.sectionBonds.insert(sectionBond, atIndex: section)
               
               for var idx = section + 1; idx < s.sectionBonds.count; idx++ {
@@ -218,7 +218,7 @@ public class UITableViewDataSourceBond<T>: ArrayBond<DynamicArray<UITableViewCel
             tableView.beginUpdates()
             tableView.deleteSections(NSIndexSet(array: i), withRowAnimation: UITableViewRowAnimation.Automatic)
             for section in sorted(i, >) {
-              s.sectionBonds[section].unbindAll()
+              s.sectionBonds[section].unbind()
               s.sectionBonds.removeAtIndex(section)
               
               for var idx = section; idx < s.sectionBonds.count; idx++ {
@@ -241,10 +241,10 @@ public class UITableViewDataSourceBond<T>: ArrayBond<DynamicArray<UITableViewCel
 
             for section in i {
               let sectionBond = UITableViewDataSourceSectionBond<Void>(tableView: tableView, section: section, disableAnimation: disableAnimation)
-              let sectionDynamic = array[section]
-              sectionDynamic.bindTo(sectionBond)
+              let sectionObservable = array[section]
+              sectionObservable.bindTo(sectionBond)
               
-              self?.sectionBonds[section].unbindAll()
+              self?.sectionBonds[section].unbind()
               self?.sectionBonds[section] = sectionBond
             }
             
@@ -261,32 +261,32 @@ public class UITableViewDataSourceBond<T>: ArrayBond<DynamicArray<UITableViewCel
     }
   }
   
-  public func bind(dynamic: DynamicArray<UITableViewCell>) {
-    bind(DynamicArray([dynamic]))
+  public func bind(observable: ObservableArray<UITableViewCell>) {
+    bind(ObservableArray([observable]))
   }
   
-  public override func bind(dynamic: Dynamic<Array<DynamicArray<UITableViewCell>>>, fire: Bool, strongly: Bool) {
-    super.bind(dynamic, fire: false, strongly: strongly)
-    if let dynamic = dynamic as? DynamicArray<DynamicArray<UITableViewCell>> {
+  public override func bind(observable: Observable<Array<ObservableArray<UITableViewCell>>>, fire: Bool, strongly: Bool) {
+    super.bind(observable, fire: false, strongly: strongly)
+    if let observable = observable as? ObservableArray<ObservableArray<UITableViewCell>> {
       
-      for section in 0..<dynamic.count {
+      for section in 0..<observable.count {
         let sectionBond = UITableViewDataSourceSectionBond<Void>(tableView: self.tableView, section: section, disableAnimation: disableAnimation)
-        let sectionDynamic = dynamic[section]
-        sectionDynamic.bindTo(sectionBond)
+        let sectionObservable = observable[section]
+        sectionObservable.bindTo(sectionBond)
         sectionBonds.append(sectionBond)
       }
       
-      dataSource = TableViewDynamicArrayDataSource(dynamic: dynamic)
-      dataSource?.nextDataSource = self.nextDataSource
+      dataSource = TableViewDynamicArrayDataSource(observable: observable)
+      dataSource?.nextDataSource = nextDataSource
       tableView?.dataSource = dataSource
       tableView?.reloadData()
     }
   }
   
   deinit {
-    self.unbindAll()
+    self.unbind()
     tableView?.dataSource = nil
-    self.dataSource = nil
+    dataSource = nil
   }
 }
 
@@ -316,10 +316,14 @@ public func ->> <T>(left: DynamicArray<UITableViewCell>, right: UITableViewDataS
   right.bind(left)
 }
 
-public func ->> (left: DynamicArray<UITableViewCell>, right: UITableView) {
+public func ->> <T>(left: ObservableArray<UITableViewCell>, right: UITableViewDataSourceBond<T>) {
+  right.bind(left)
+}
+
+public func ->> (left: ObservableArray<UITableViewCell>, right: UITableView) {
   left ->> right.designatedBond
 }
 
-public func ->> (left: DynamicArray<DynamicArray<UITableViewCell>>, right: UITableView) {
+public func ->> (left: ObservableArray<ObservableArray<UITableViewCell>>, right: UITableView) {
   left ->> right.designatedBond
 }

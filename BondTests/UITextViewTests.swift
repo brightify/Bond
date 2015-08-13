@@ -104,20 +104,22 @@ class UITextViewTests: XCTestCase {
     dynamicDriver1.value = "b"
     
     XCTAssertEqual(dynamicDriver1.value, "b", "Value after change")
-    XCTAssertEqual(dynamicDriver2.value, "b", "Value after change")
-    XCTAssertEqual(textField.text, "b", "Value after change")
+    XCTAssertEqual(dynamicDriver2.value, "a", "Value after change")
+    XCTAssertEqual(textField.text, "a", "Value after change")
 
     dynamicDriver2.value = "y"
     
-    XCTAssertEqual(dynamicDriver1.value, "y", "Value after change")
+    XCTAssertEqual(dynamicDriver1.value, "b", "Value after change")
     XCTAssertEqual(dynamicDriver2.value, "y", "Value after change")
-    XCTAssertEqual(textField.text, "y", "Value after change")
+    XCTAssertEqual(textField.text, "a", "Value after change")
     
     textField.text = "2"
     textField.sendActionsForControlEvents(.EditingChanged)
     
-    XCTAssertEqual(dynamicDriver1.value, "2", "Value after change")
-    XCTAssertEqual(dynamicDriver2.value, "2", "Value after change")
+    XCTAssertEqual(dynamicDriver1.value, "b", "Value after change")
+    XCTAssertEqual(dynamicDriver2.value, "y", "Value after change")
     XCTAssertEqual(textField.text, "2", "Value after change")
+    XCTAssertEqual(textView1.text, "a", "Value after change")
+    XCTAssertEqual(textView2.text, "2", "Value after change")
   }
 }

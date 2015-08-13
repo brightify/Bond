@@ -9,7 +9,7 @@
 import Bond
 import XCTest
 
-func ==<T: Equatable>(dynamicArray: DynamicArray<T>, array: [T]) -> Bool {
+func ==<T: Equatable>(dynamicArray: ObservableArray<T>, array: [T]) -> Bool {
   if dynamicArray.count == array.count {
     for i in 0..<array.count {
       if dynamicArray[i] != array[i] {
@@ -135,7 +135,7 @@ class ArrayTests: XCTestCase {
   
   func testArrayFilter() {
     let array = DynamicArray<Int>([])
-    let filtered: DynamicArray<Int> = array.filter { $0 > 5 }
+    let filtered: ObservableArray<Int> = array.filter { $0 > 5 }
     let bond = ArrayBond<Int>()
     
     var indices: [Int] = []
@@ -391,7 +391,7 @@ class ArrayTests: XCTestCase {
   func testBasicDynCount() {
     let array = DynamicArray<Int>([])
     let updatedCount = Dynamic(0)
-    array.dynCount ->| updatedCount
+    array.observableCount ->| updatedCount
     
     XCTAssert(array.count == 0)
     
@@ -399,7 +399,7 @@ class ArrayTests: XCTestCase {
     XCTAssert(updatedCount.value == 1)
     XCTAssert(array.count == 1)
     
-    array.setArray([1, 2, 3, 4, 5])
+    array.value = [1, 2, 3, 4, 5]
     XCTAssert(updatedCount.value == 5)
     XCTAssert(array.count == 5)
     
@@ -413,7 +413,7 @@ class ArrayTests: XCTestCase {
     let filtered = array.filter { e in e > 2 }
     
     let updatedCount = Dynamic(0)
-    filtered.dynCount ->> updatedCount
+    filtered.observableCount ->> updatedCount
     
     XCTAssertEqual(updatedCount.value, 3)
     
@@ -439,7 +439,7 @@ class ArrayTests: XCTestCase {
     }
     array ->> bond
     
-    array.setArray(expectedAfter)
+    array.value = expectedAfter
     
     XCTAssertEqual(testCount, 2, "reset events did not fire")
   }
@@ -461,7 +461,7 @@ class ArrayTests: XCTestCase {
     }
     array ->> bond
     
-    source.setArray(sourceAfter)
+    source.value = sourceAfter
     
     XCTAssertEqual(testCount, 2, "reset events did not fire")
   }
@@ -483,14 +483,14 @@ class ArrayTests: XCTestCase {
     }
     array ->> bond
     
-    source.setArray(sourceAfter)
+    source.value = sourceAfter
     
     XCTAssertEqual(testCount, 2, "reset events did not fire")
   }
 
   func testArrayDeliverOn() {
     let array = DynamicArray<Int>([1, 2, 3])
-    let deliveredOn: DynamicArray<Int> = deliver(array, on: dispatch_get_main_queue())
+    let deliveredOn: ObservableArray<Int> = deliver(array, on: dispatch_get_main_queue())
     let bond = ArrayBond<Int>()
     
     let e1 = expectationWithDescription("Insert")

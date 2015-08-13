@@ -32,161 +32,107 @@ import Foundation
 // MARK: Array Bond
 
 public class ArrayBond<T>: Bond<Array<T>> {
-  public var willInsertListener: ((DynamicArray<T>, [Int]) -> Void)?
-  public var didInsertListener: ((DynamicArray<T>, [Int]) -> Void)?
+  public var willInsertListener: ((ObservableArray<T>, [Int]) -> Void)?
+  public var didInsertListener: ((ObservableArray<T>, [Int]) -> Void)?
   
-  public var willRemoveListener: ((DynamicArray<T>, [Int]) -> Void)?
-  public var didRemoveListener: ((DynamicArray<T>, [Int]) -> Void)?
+  public var willRemoveListener: ((ObservableArray<T>, [Int]) -> Void)?
+  public var didRemoveListener: ((ObservableArray<T>, [Int]) -> Void)?
   
-  public var willUpdateListener: ((DynamicArray<T>, [Int]) -> Void)?
-  public var didUpdateListener: ((DynamicArray<T>, [Int]) -> Void)?
+  public var willUpdateListener: ((ObservableArray<T>, [Int]) -> Void)?
+  public var didUpdateListener: ((ObservableArray<T>, [Int]) -> Void)?
 
-  public var willResetListener: (DynamicArray<T> -> Void)?
-  public var didResetListener: (DynamicArray<T> -> Void)?
+  public var willResetListener: (ObservableArray<T> -> Void)?
+  public var didResetListener: (ObservableArray<T> -> Void)?
   
-  override public init() {
+  public override init() {
     super.init()
-  }
-  
-  override public func bind(dynamic: Dynamic<Array<T>>) {
-    bind(dynamic, fire: true, strongly: true)
-  }
-  
-  override public func bind(dynamic: Dynamic<Array<T>>, fire: Bool) {
-    bind(dynamic, fire: fire, strongly: true)
-  }
-  
-  override public func bind(dynamic: Dynamic<Array<T>>, fire: Bool, strongly: Bool) {
-    super.bind(dynamic, fire: fire, strongly: strongly)
   }
 }
 
-// MARK: Dynamic array
+public struct ObservableArrayGenerator<T>: GeneratorType {
+  private var index = -1
+  private let array: ObservableArray<T>
+  
+  init(array: ObservableArray<T>) {
+    self.array = array
+  }
+  
+  typealias Element = T
+  
+  public mutating func next() -> T? {
+    index++
+    return index < array.count ? array[index] : nil
+  }
+}
 
-/**
-Note: Directly setting `DynamicArray.value` is not recommended. The array's count will not be updated and no array change notification will be emitted. Call `setArray:` instead.
-*/
-public class DynamicArray<T>: Dynamic<Array<T>>, SequenceType {
+// MARK: Observable array
+
+public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
+  public let observableCount: Observable<Int> = Observable(0)
   
-  public typealias Element = T
-  public typealias Generator = DynamicArrayGenerator<T>
-  
-  public let dynCount: Dynamic<Int>
-  
-  public override init(_ v: Array<T>) {
-    dynCount = Dynamic(0)
-    super.init(v)
-    dynCount.value = self.count
-  }
-  
-  public override func bindTo(bond: Bond<Array<T>>) {
-    bond.bind(self, fire: true, strongly: true)
-  }
-  
-  public override func bindTo(bond: Bond<Array<T>>, fire: Bool) {
-    bond.bind(self, fire: fire, strongly: true)
-  }
-  
-  public override func bindTo(bond: Bond<Array<T>>, fire: Bool, strongly: Bool) {
-    bond.bind(self, fire: fire, strongly: strongly)
-  }
-  
-  public func setArray(newValue: [T]) {
-    dispatchWillReset()
-    value = newValue
-    dispatchDidReset()
+  public override var value: Array<T> {
+    willSet {
+      dispatchWillReset()
+    }
+    didSet {
+      dispatchDidReset()
+    }
   }
   
   public var count: Int {
-    return value.count
+    return noEventValue.count
   }
   
   public var capacity: Int {
-    return value.capacity
+    return noEventValue.capacity
   }
   
   public var isEmpty: Bool {
-    return value.isEmpty
+    return noEventValue.isEmpty
   }
   
   public var first: T? {
-    return value.first
+    return noEventValue.first
   }
   
   public var last: T? {
-    return value.last
+    return noEventValue.last
   }
   
-  public func append(newElement: T) {
-    dispatchWillInsert([value.count])
-    value.append(newElement)
-    dispatchDidInsert([value.count-1])
+  public convenience init() {
+    self.init([])
   }
   
-  public func append(array: Array<T>) {
-	splice(array, atIndex: value.count)
-  }
-  
-  public func removeLast() -> T {
-    if self.count > 0 {
-      dispatchWillRemove([value.count-1])
-      let last = value.removeLast()
-      dispatchDidRemove([value.count])
-      return last
-    }
-    
-    fatalError("Cannot removeLast() as there are no elements in the array!")
-  }
-  
-  public func insert(newElement: T, atIndex i: Int) {
-    dispatchWillInsert([i])
-    value.insert(newElement, atIndex: i)
-    dispatchDidInsert([i])
-  }
-  
-  public func splice(array: Array<T>, atIndex i: Int) {
-    if array.count > 0 {
-      let indices = Array(i..<i+array.count)
-      dispatchWillInsert(indices)
-      value.splice(array, atIndex: i)
-      dispatchDidInsert(indices)
-    }
-  }
-  
-  public func removeAtIndex(index: Int) -> T {
-    dispatchWillRemove([index])
-    let object = value.removeAtIndex(index)
-    dispatchDidRemove([index])
-    return object
-  }
-  
-  public func removeAll(keepCapacity: Bool) {
-    let count = value.count
-    let indices = Array(0..<count)
-    dispatchWillRemove(indices)
-    value.removeAll(keepCapacity: keepCapacity)
-    dispatchDidRemove(indices)
+  public override init(_ value: Array<T>) {
+    super.init(value)
+    observableCount.value = count
   }
   
   public subscript(index: Int) -> T {
     get {
-      return value[index]
+      return noEventValue[index]
     }
-    set(newObject) {
-      if index == value.count {
-        dispatchWillInsert([index])
-        value[index] = newObject
-        dispatchDidInsert([index])
-      } else {
-        dispatchWillUpdate([index])
-        value[index] = newObject
-        dispatchDidUpdate([index])
+  }
+  
+  public func generate() -> ObservableArrayGenerator<T> {
+    return ObservableArrayGenerator<T>(array: self)
+  }
+  
+  private func dispatchWillReset() {
+    for bondBox in bonds {
+      if let arrayBond = bondBox.bond as? ArrayBond {
+        arrayBond.willResetListener?(self)
       }
     }
   }
   
-  public func generate() -> DynamicArrayGenerator<T> {
-    return DynamicArrayGenerator<T>(array: self)
+  private func dispatchDidReset() {
+    observableCount.value = self.count
+    for bondBox in bonds {
+      if let arrayBond = bondBox.bond as? ArrayBond {
+        arrayBond.didResetListener?(self)
+      }
+    }
   }
   
   private func dispatchWillInsert(indices: [Int]) {
@@ -199,7 +145,7 @@ public class DynamicArray<T>: Dynamic<Array<T>>, SequenceType {
   
   private func dispatchDidInsert(indices: [Int]) {
     if !indices.isEmpty {
-      dynCount.value = count
+      observableCount.value = count
     }
     for bondBox in bonds {
       if let arrayBond = bondBox.bond as? ArrayBond {
@@ -215,10 +161,10 @@ public class DynamicArray<T>: Dynamic<Array<T>>, SequenceType {
       }
     }
   }
-
+  
   private func dispatchDidRemove(indices: [Int]) {
     if !indices.isEmpty {
-      dynCount.value = count
+      observableCount.value = count
     }
     for bondBox in bonds {
       if let arrayBond = bondBox.bond as? ArrayBond {
@@ -242,49 +188,117 @@ public class DynamicArray<T>: Dynamic<Array<T>>, SequenceType {
       }
     }
   }
+}
+
+public class MutableObservableArray<T>: ObservableArray<T> {
   
-  private func dispatchWillReset() {
-    for bondBox in bonds {
-      if let arrayBond = bondBox.bond as? ArrayBond {
-        arrayBond.willResetListener?(self)
-      }
+  public convenience init() {
+    self.init([])
+  }
+  
+  public override init(_ value: Array<T>) {
+    super.init(value)
+  }
+  
+  public func append(newElement: T) {
+    dispatchWillInsert([noEventValue.count])
+    noEventValue.append(newElement)
+    dispatchDidInsert([noEventValue.count-1])
+  }
+  
+  public func append(array: Array<T>) {
+    splice(array, atIndex: noEventValue.count)
+  }
+  
+  public func removeLast() -> T {
+    if count > 0 {
+      dispatchWillRemove([noEventValue.count-1])
+      let last = noEventValue.removeLast()
+      dispatchDidRemove([noEventValue.count])
+      return last
+    }
+    
+    fatalError("Cannot removeLast() as there are no elements in the array!")
+  }
+  
+  public func insert(newElement: T, atIndex i: Int) {
+    dispatchWillInsert([i])
+    noEventValue.insert(newElement, atIndex: i)
+    dispatchDidInsert([i])
+  }
+  
+  public func splice(array: Array<T>, atIndex i: Int) {
+    if array.count > 0 {
+      let indices = Array(i..<i+array.count)
+      dispatchWillInsert(indices)
+      noEventValue.splice(array, atIndex: i)
+      dispatchDidInsert(indices)
     }
   }
   
-  private func dispatchDidReset() {
-    dynCount.value = self.count
-    for bondBox in bonds {
-      if let arrayBond = bondBox.bond as? ArrayBond {
-        arrayBond.didResetListener?(self)
+  public func removeAtIndex(index: Int) -> T {
+    dispatchWillRemove([index])
+    let object = noEventValue.removeAtIndex(index)
+    dispatchDidRemove([index])
+    return object
+  }
+  
+  public func removeAll(keepCapacity: Bool) {
+    let count = noEventValue.count
+    let indices = Array(0..<count)
+    dispatchWillRemove(indices)
+    noEventValue.removeAll(keepCapacity: keepCapacity)
+    dispatchDidRemove(indices)
+  }
+  
+  public override subscript(index: Int) -> T {
+    get {
+      return super[index]
+    }
+    set(newObject) {
+      if index == noEventValue.count {
+        dispatchWillInsert([index])
+        noEventValue[index] = newObject
+        dispatchDidInsert([index])
+      } else {
+        dispatchWillUpdate([index])
+        noEventValue[index] = newObject
+        dispatchDidUpdate([index])
       }
     }
   }
 }
 
-public struct DynamicArrayGenerator<T>: GeneratorType {
-  private var index = -1
-  private let array: DynamicArray<T>
+// MARK: Dynamic array
+
+/**
+Note: Directly setting `DynamicArray.value` is not recommended. The array's count will not be updated and no array change notification will be emitted. Call `setArray:` instead.
+*/
+public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
+  public let arrayBond: ArrayBond<T> = ArrayBond()
   
-  init(array: DynamicArray<T>) {
-    self.array = array
+  public var designatedBond: Bond<Array<T>> {
+    return arrayBond
   }
   
-  typealias Element = T
+  public convenience init() {
+    self.init([])
+  }
   
-  public mutating func next() -> T? {
-    index++
-    return index < array.count ? array[index] : nil
+  public override init(_ array: Array<T>) {
+    super.init(array)
+    arrayBond.listener = { [unowned self] in self.value = $0 }
   }
 }
 
 // MARK: Dynamic Array Map Proxy
 
-private class DynamicArrayMapProxy<T, U>: DynamicArray<U> {
-  private unowned var sourceArray: DynamicArray<T>
+private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
+  private unowned var sourceArray: ObservableArray<T>
   private var mapf: (T, Int) -> U
   private let bond: ArrayBond<T>
   
-  private init(sourceArray: DynamicArray<T>, mapf: (T, Int) -> U) {
+  private init(sourceArray: ObservableArray<T>, mapf: (T, Int) -> U) {
     self.sourceArray = sourceArray
     self.mapf = mapf
     self.bond = ArrayBond<T>()
@@ -325,11 +339,11 @@ private class DynamicArrayMapProxy<T, U>: DynamicArray<U> {
   }
   
   override var value: [U] {
-    set(newValue) {
-      fatalError("Modifying proxy array is not supported!")
-    }
     get {
       fatalError("Getting proxy array value is not supported!")
+    }
+    set {
+      fatalError("Modifying proxy array is not supported!")
     }
   }
   
@@ -361,44 +375,9 @@ private class DynamicArrayMapProxy<T, U>: DynamicArray<U> {
     }
   }
   
-  override func setArray(newValue: [U]) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func append(newElement: U) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func append(array: Array<U>) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func removeLast() -> U {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func insert(newElement: U, atIndex i: Int) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func splice(array: Array<U>, atIndex i: Int) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func removeAtIndex(index: Int) -> U {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func removeAll(keepCapacity: Bool) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
   override subscript(index: Int) -> U {
     get {
         return mapf(sourceArray[index], index)
-    }
-    set(newObject) {
-      fatalError("Modifying proxy array is not supported!")
     }
   }
 }
@@ -417,19 +396,19 @@ func indexOfFirstEqualOrLargerThan(x: Int, array: [Int]) -> Int {
 
 // MARK: Dynamic Array Filter Proxy
 
-private class DynamicArrayFilterProxy<T>: DynamicArray<T> {
-  private unowned var sourceArray: DynamicArray<T>
+private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
+  private unowned var sourceArray: ObservableArray<T>
   private var pointers: [Int]
   private var filterf: T -> Bool
   private let bond: ArrayBond<T>
   
-  private init(sourceArray: DynamicArray<T>, filterf: T -> Bool) {
+  private init(sourceArray: ObservableArray<T>, filterf: T -> Bool) {
     self.sourceArray = sourceArray
     self.filterf = filterf
     self.bond = ArrayBond<T>()
     self.bond.bind(sourceArray, fire: false)
     
-    self.pointers = DynamicArrayFilterProxy.pointersFromSource(sourceArray, filterf: filterf)
+    self.pointers = ObservableArrayFilterProxy.pointersFromSource(sourceArray, filterf: filterf)
     
     super.init([])
 
@@ -554,12 +533,12 @@ private class DynamicArrayFilterProxy<T>: DynamicArray<T> {
     }
     
     bond.didResetListener = { [unowned self] array in
-      self.pointers = DynamicArrayFilterProxy.pointersFromSource(array, filterf: filterf)
+      self.pointers = ObservableArrayFilterProxy.pointersFromSource(array, filterf: filterf)
       self.dispatchDidReset()
     }
   }
   
-  class func pointersFromSource(sourceArray: DynamicArray<T>, filterf: T -> Bool) -> [Int] {
+  class func pointersFromSource(sourceArray: ObservableArray<T>, filterf: T -> Bool) -> [Int] {
     var pointers = [Int]()
     for (index, element) in enumerate(sourceArray) {
       if filterf(element) {
@@ -570,11 +549,11 @@ private class DynamicArrayFilterProxy<T>: DynamicArray<T> {
   }
   
   override var value: [T] {
-    set(newValue) {
-      fatalError("Modifying proxy array is not supported!")
-    }
     get {
       fatalError("Getting proxy array value is not supported!")
+    }
+    set(newValue) {
+      fatalError("Modifying proxy array is not supported!")
     }
   }
   
@@ -606,56 +585,21 @@ private class DynamicArrayFilterProxy<T>: DynamicArray<T> {
     }
   }
   
-  override private func setArray(newValue: [T]) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-
-  override private func append(newElement: T) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  private override func append(array: Array<T>) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override private func removeLast() -> T {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override private func insert(newElement: T, atIndex i: Int) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  private override func splice(array: Array<T>, atIndex i: Int) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override private func removeAtIndex(index: Int) -> T {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override private func removeAll(keepCapacity: Bool) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
   override private subscript(index: Int) -> T {
     get {
       return sourceArray[pointers[index]]
-    }
-    set {
-      fatalError("Modifying proxy array is not supported!")
     }
   }
 }
 
 // MARK: Dynamic Array DeliverOn Proxy
 
-private class DynamicArrayDeliverOnProxy<T>: DynamicArray<T> {
-  private unowned var sourceArray: DynamicArray<T>
+private class ObservableArrayDeliverOnProxy<T>: ObservableArray<T> {
+  private unowned var sourceArray: ObservableArray<T>
   private var queue: dispatch_queue_t
   private let bond: ArrayBond<T>
   
-  private init(sourceArray: DynamicArray<T>, queue: dispatch_queue_t) {
+  private init(sourceArray: ObservableArray<T>, queue: dispatch_queue_t) {
     self.sourceArray = sourceArray
     self.queue = queue
     self.bond = ArrayBond<T>()
@@ -712,11 +656,11 @@ private class DynamicArrayDeliverOnProxy<T>: DynamicArray<T> {
   }
   
   override var value: [T] {
-    set(newValue) {
-      fatalError("Modifying proxy array is not supported!")
-    }
     get {
       fatalError("Getting proxy array value is not supported!")
+    }
+    set(newValue) {
+      fatalError("Modifying proxy array is not supported!")
     }
   }
   
@@ -748,80 +692,44 @@ private class DynamicArrayDeliverOnProxy<T>: DynamicArray<T> {
     }
   }
   
-  override func setArray(newValue: [T]) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func append(newElement: T) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func append(array: Array<T>) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func removeLast() -> T {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func insert(newElement: T, atIndex i: Int) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func splice(array: Array<T>, atIndex i: Int) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func removeAtIndex(index: Int) -> T {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
-  override func removeAll(keepCapacity: Bool) {
-    fatalError("Modifying proxy array is not supported!")
-  }
-  
   override subscript(index: Int) -> T {
     get {
       return sourceArray[index]
-    }
-    set(newObject) {
-      fatalError("Modifying proxy array is not supported!")
     }
   }
 }
 
 // MARK: Dynamic Array additions
-
-public extension DynamicArray
+public extension ObservableArray
 {
-  public func map<U>(f: (T, Int) -> U) -> DynamicArray<U> {
+  public func map<U>(f: (T, Int) -> U) -> ObservableArray<U> {
     return _map(self, f)
   }
   
-  public func map<U>(f: T -> U) -> DynamicArray<U> {
+  public func map<U>(f: T -> U) -> ObservableArray<U> {
     let mapf = { (o: T, i: Int) -> U in f(o) }
     return _map(self, mapf)
   }
   
-  public func filter(f: T -> Bool) -> DynamicArray<T> {
+  public func filter(f: T -> Bool) -> ObservableArray<T> {
     return _filter(self, f)
   }
 }
 
 // MARK: Map
 
-private func _map<T, U>(dynamicArray: DynamicArray<T>, f: (T, Int) -> U) -> DynamicArrayMapProxy<T, U> {
-  return DynamicArrayMapProxy(sourceArray: dynamicArray, mapf: f)
+private func _map<T, U>(dynamicArray: ObservableArray<T>, f: (T, Int) -> U) -> ObservableArrayMapProxy<T, U> {
+  return ObservableArrayMapProxy(sourceArray: dynamicArray, mapf: f)
 }
 
 // MARK: Filter
 
-private func _filter<T>(dynamicArray: DynamicArray<T>, f: T -> Bool) -> DynamicArray<T> {
-  return DynamicArrayFilterProxy(sourceArray: dynamicArray, filterf: f)
+private func _filter<T>(dynamicArray: ObservableArray<T>, f: T -> Bool) -> ObservableArray<T> {
+  return ObservableArrayFilterProxy(sourceArray: dynamicArray, filterf: f)
 }
 
 // MARK: DeliverOn
 
-public func deliver<T>(dynamicArray: DynamicArray<T>, on queue: dispatch_queue_t) -> DynamicArray<T> {
-  return DynamicArrayDeliverOnProxy(sourceArray: dynamicArray, queue: queue)
+public func deliver<T>(dynamicArray: ObservableArray<T>, on queue: dispatch_queue_t) -> ObservableArray<T> {
+  return ObservableArrayDeliverOnProxy(sourceArray: dynamicArray, queue: queue)
 }

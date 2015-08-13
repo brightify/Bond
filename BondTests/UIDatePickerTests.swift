@@ -81,11 +81,11 @@ class UIDatePickerTests: XCTestCase {
     dynamicDriver1.value = date3
     
     XCTAssertEqual(dynamicDriver1.value, date3, "Value after dynamic update")
-    XCTAssertEqual(dynamicDriver2.value, date3, "Value after dynamic update")
+    XCTAssertEqual(dynamicDriver2.value, date1, "Value after dynamic update")
     
     dynamicDriver2.value = date4
     
-    XCTAssertEqual(dynamicDriver1.value, date4, "Value after dynamic update")
+    XCTAssertEqual(dynamicDriver1.value, date3, "Value after dynamic update")
     XCTAssertEqual(dynamicDriver2.value, date4, "Value after dynamic update")
 
   }

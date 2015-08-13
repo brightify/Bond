@@ -34,11 +34,11 @@ infix operator <->> { associativity left precedence 100 }
 
 // MARK: Bind and fire
 
-public func ->> <T>(left: Dynamic<T>, right: Bond<T>) {
+public func ->> <T>(left: Observable<T>, right: Bond<T>) {
   left.bindTo(right)
 }
 
-public func ->> <T>(left: Dynamic<T>, right: Dynamic<T>) {
+public func ->> <T>(left: Observable<T>, right: Dynamic<T>) {
   left ->> right.valueBond
 }
 
@@ -50,18 +50,18 @@ public func ->> <T: Dynamical, U: Bondable where T.DynamicType == U.BondType>(le
   left.designatedDynamic ->> right.designatedBond
 }
 
-public func ->> <T, U: Bondable where U.BondType == T>(left: Dynamic<T>, right: U) {
+public func ->> <T, U: Bondable where U.BondType == T>(left: Observable<T>, right: U) {
   left ->> right.designatedBond
 }
 
 
 // MARK: Bind only
 
-public func ->| <T>(left: Dynamic<T>, right: Bond<T>) {
+public func ->| <T>(left: Observable<T>, right: Bond<T>) {
   right.bind(left, fire: false)
 }
 
-public func ->| <T>(left: Dynamic<T>, right: T -> Void) -> Bond<T> {
+public func ->| <T>(left: Observable<T>, right: T -> Void) -> Bond<T> {
   let bond = Bond<T>(right)
   bond.bind(left, fire: false)
   return bond
@@ -75,7 +75,7 @@ public func ->| <T: Dynamical, U: Bondable where T.DynamicType == U.BondType>(le
   left.designatedDynamic ->| right.designatedBond
 }
 
-public func ->| <T, U: Bondable where U.BondType == T>(left: Dynamic<T>, right: U) {
+public func ->| <T, U: Bondable where U.BondType == T>(left: Observable<T>, right: U) {
   left ->| right.designatedBond
 }
 

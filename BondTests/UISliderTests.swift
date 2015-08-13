@@ -69,8 +69,12 @@ class UISliderTests: XCTestCase {
     dynamicDriver1.value = 0.3
     
     XCTAssertEqual(dynamicDriver1.value, Float(0.3), "Value after change")
-    XCTAssertEqual(dynamicDriver2.value, Float(0.3), "Value after change")
+    XCTAssertEqual(dynamicDriver2.value, Float(0.1), "Value after change")
 
+    dynamicDriver1 <->> dynamicDriver2
+    
+    XCTAssertEqual(dynamicDriver2.value, Float(0.3), "Value after change")
+    
     dynamicDriver2.value = 0.4
     
     XCTAssertEqual(dynamicDriver1.value, Float(0.4), "Value after change")

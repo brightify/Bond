@@ -82,13 +82,11 @@ public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #default
   let helper = DynamicKVOHelper(keyPath: keyPath, object: object as NSObject) {
     [unowned dynamic] (v: AnyObject) -> Void in
     
-    dynamic.updatingFromSelf = true
     if v is NSNull {
       dynamic.value = defaultValue
     } else {
       dynamic.value = (v as? T)!
     }
-    dynamic.updatingFromSelf = false
   }
   
   dynamic.retain(helper)
@@ -109,9 +107,7 @@ public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #from: A
   
   let helper = DynamicKVOHelper(keyPath: keyPath, object: object as NSObject) {
     [unowned dynamic] (v: AnyObject?) -> Void in
-    dynamic.updatingFromSelf = true
     dynamic.value = from(v)
-    dynamic.updatingFromSelf = false
   }
   
   let feedbackBond = Bond<T>() { [weak object] value in
@@ -132,15 +128,12 @@ public func dynamicObservableFor<T>(notificationName: String, #object: AnyObject
   
   let helper = DynamicNotificationCenterHelper(notificationName: notificationName, object: object) {
     [unowned dynamic] notification in
-    dynamic.updatingFromSelf = true
     dynamic.value = parser(notification)
-    dynamic.updatingFromSelf = false
   }
   
   dynamic.retain(helper)
   return dynamic
 }
-
 
 public extension Dynamic {
   public class func asObservableFor(object: NSObject, keyPath: String, defaultValue: T) -> Dynamic<T> {

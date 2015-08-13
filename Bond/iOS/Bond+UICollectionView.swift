@@ -9,10 +9,10 @@
 import UIKit
 
 @objc class CollectionViewDynamicArrayDataSource: NSObject, UICollectionViewDataSource {
-  weak var dynamic: DynamicArray<DynamicArray<UICollectionViewCell>>?
+  weak var dynamic: ObservableArray<ObservableArray<UICollectionViewCell>>?
   @objc weak var nextDataSource: UICollectionViewDataSource?
   
-  init(dynamic: DynamicArray<DynamicArray<UICollectionViewCell>>) {
+  init(dynamic: ObservableArray<ObservableArray<UICollectionViewCell>>) {
     self.dynamic = dynamic
     super.init()
   }
@@ -81,11 +81,11 @@ private class UICollectionViewDataSourceSectionBond<T>: ArrayBond<UICollectionVi
   }
   
   deinit {
-    self.unbindAll()
+    self.unbind()
   }
 }
 
-public class UICollectionViewDataSourceBond<T>: ArrayBond<DynamicArray<UICollectionViewCell>> {
+public class UICollectionViewDataSourceBond<T>: ArrayBond<ObservableArray<UICollectionViewCell>> {
   weak var collectionView: UICollectionView?
   private var dataSource: CollectionViewDynamicArrayDataSource?
   private var sectionBonds: [UICollectionViewDataSourceSectionBond<Void>] = []
@@ -129,7 +129,7 @@ public class UICollectionViewDataSourceBond<T>: ArrayBond<DynamicArray<UICollect
             }, completion: nil)
           
           for section in sorted(i, >) {
-            s.sectionBonds[section].unbindAll()
+            s.sectionBonds[section].unbind()
             s.sectionBonds.removeAtIndex(section)
             
             for var idx = section; idx < s.sectionBonds.count; idx++ {
@@ -151,7 +151,7 @@ public class UICollectionViewDataSourceBond<T>: ArrayBond<DynamicArray<UICollect
           let sectionDynamic = array[section]
           sectionDynamic.bindTo(sectionBond)
           
-          self?.sectionBonds[section].unbindAll()
+          self?.sectionBonds[section].unbind()
           self?.sectionBonds[section] = sectionBond
         }
       }
@@ -164,13 +164,13 @@ public class UICollectionViewDataSourceBond<T>: ArrayBond<DynamicArray<UICollect
     }
   }
   
-  public func bind(dynamic: DynamicArray<UICollectionViewCell>) {
-    bind(DynamicArray([dynamic]))
+  public func bind(dynamic: ObservableArray<UICollectionViewCell>) {
+    bind(ObservableArray([dynamic]))
   }
   
-  public override func bind(dynamic: Dynamic<Array<DynamicArray<UICollectionViewCell>>>, fire: Bool, strongly: Bool) {
+  public override func bind(dynamic: Observable<Array<ObservableArray<UICollectionViewCell>>>, fire: Bool, strongly: Bool) {
     super.bind(dynamic, fire: false, strongly: strongly)
-    if let dynamic = dynamic as? DynamicArray<DynamicArray<UICollectionViewCell>> {
+    if let dynamic = dynamic as? ObservableArray<ObservableArray<UICollectionViewCell>> {
       
       for section in 0..<dynamic.count {
         let sectionBond = UICollectionViewDataSourceSectionBond<Void>(collectionView: self.collectionView, section: section)
@@ -187,7 +187,7 @@ public class UICollectionViewDataSourceBond<T>: ArrayBond<DynamicArray<UICollect
   }
   
   deinit {
-    self.unbindAll()
+    self.unbind()
     collectionView?.dataSource = nil
     self.dataSource = nil
   }
@@ -208,14 +208,14 @@ extension UICollectionView /*: Bondable */ {
   }
 }
 
-public func ->> <T>(left: DynamicArray<UICollectionViewCell>, right: UICollectionViewDataSourceBond<T>) {
+public func ->> <T>(left: ObservableArray<UICollectionViewCell>, right: UICollectionViewDataSourceBond<T>) {
   right.bind(left)
 }
 
-public func ->> (left: DynamicArray<UICollectionViewCell>, right: UICollectionView) {
+public func ->> (left: ObservableArray<UICollectionViewCell>, right: UICollectionView) {
   left ->> right.designatedBond
 }
 
-public func ->> (left: DynamicArray<DynamicArray<UICollectionViewCell>>, right: UICollectionView) {
+public func ->> (left: ObservableArray<ObservableArray<UICollectionViewCell>>, right: UICollectionView) {
   left ->> right.designatedBond
 }

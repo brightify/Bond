@@ -69,8 +69,12 @@ class UISwitchTests: XCTestCase {
     dynamicDriver1.value = false
     
     XCTAssertEqual(dynamicDriver1.value, false, "Value after change")
-    XCTAssertEqual(dynamicDriver2.value, false, "Value after change")
+    XCTAssertEqual(dynamicDriver2.value, true, "Value after change")
 
+    dynamicDriver1 <->> dynamicDriver2
+    
+    XCTAssertEqual(dynamicDriver2.value, false, "Value after change")
+    
     dynamicDriver2.value = true
     
     XCTAssertEqual(dynamicDriver1.value, true, "Value after change")

@@ -35,21 +35,19 @@ public class BondBox<T> {
   public init(_ b: Bond<T>) { bond = b; _hash = b.hashValue }
 }
 
-public class DynamicBox<T> {
-  weak var dynamic: Dynamic<T>?
-  public init(_ d: Dynamic<T>) { dynamic = d }
-}
-
 // MARK: - Scalar Dynamic
 
 // MARK: Bond
-
 public class Bond<T> {
   public typealias Listener = T -> Void
   
   public var listener: Listener?
-  internal var bondedDynamics: [Dynamic<T>] = []
-  internal var bondedWeakDynamics: [DynamicBox<T>] = []
+  public var bound: Bool {
+    return boundObservable != nil
+  }
+
+  internal weak var boundObservable: Observable<T>?
+  internal var retainedObservable: Observable<T>?
   
   public init() {
   }
@@ -58,80 +56,82 @@ public class Bond<T> {
     self.listener = listener
   }
   
-  public func bind(dynamic: Dynamic<T>) {
-    bind(dynamic, fire: true, strongly: true)
+  public func bind(observable: Observable<T>) {
+    bind(observable, fire: true, strongly: true)
   }
   
-  public func bind(dynamic: Dynamic<T>, fire: Bool) {
-    bind(dynamic, fire: fire, strongly: true)
+  public func bind(observable: Observable<T>, fire: Bool) {
+    bind(observable, fire: fire, strongly: true)
   }
   
-  public func bind(dynamic: Dynamic<T>, fire: Bool, strongly: Bool) {
-    dynamic.bonds.insert(BondBox(self))
-
+  public func bind(observable: Observable<T>, fire: Bool, strongly: Bool) {
+    unbind()
+    
+    observable.bonds.insert(BondBox(self))
+    
+    boundObservable = observable
     if strongly {
-      self.bondedDynamics.append(dynamic)
-    } else {
-      self.bondedWeakDynamics.append(DynamicBox(dynamic))
+      retainedObservable = observable
     }
     
-    if fire && dynamic.valid {
-      self.listener?(dynamic.value)
+    if fire && observable.valid {
+      listener?(observable.value)
     }
   }
   
-  public func unbindAll() {
-    let dynamics = bondedDynamics + bondedWeakDynamics.reduce([Dynamic<T>]()) { memo, value in
-      if let dynamic = value.dynamic {
-        return memo + [dynamic]
-      } else {
-        return memo
+  public func unbind() {
+    let boxedSelf = BondBox(self)
+    boundObservable?.bonds.remove(boxedSelf)
+
+    // We need to keep the reference and then set the properties to nil to avoid infinite recursion
+    let boundDynamic = boundObservable as? Dynamic
+    boundObservable = nil
+    retainedObservable = nil
+    
+    if let boundDynamic = boundDynamic, let otherBoundDynamic = boundDynamic.valueBond.boundObservable as? Dynamic {
+      if otherBoundDynamic.valueBond == self {
+        println("WARNING: A two-way binding was unbinded because of a new binding to bond \(self)")
+        boundDynamic.valueBond.unbind()
       }
     }
-    
-    for dynamic in dynamics {
-      dynamic.bonds.remove(BondBox<T>(self))
-    }
-    
-    self.bondedDynamics.removeAll(keepCapacity: true)
-    self.bondedWeakDynamics.removeAll(keepCapacity: true)
   }
 }
 
-// MARK: Dynamic
-
-public class Dynamic<T> {
+public class Observable<T> {
   
   private var dispatchInProgress: Bool = false
+  internal var bonds: Set<BondBox<T>> = Set()
   
-  internal var _value: T? {
-    didSet {
+  internal var backingValue: T?
+  internal var noEventValue: T {
+    get {
+      if let value = backingValue {
+        return value
+      } else {
+        fatalError("Observable has no value defined at the moment!")
+      }
+    }
+    set {
+      backingValue = newValue
+    }
+  }
+  public var value: T {
+    get {
+      return noEventValue
+    }
+    set {
       objc_sync_enter(self)
-      if let value = _value {
-        if !self.dispatchInProgress {
-          dispatch(value)
-        }
+      noEventValue = newValue
+      if !self.dispatchInProgress {
+        dispatch(newValue)
       }
       objc_sync_exit(self)
     }
   }
   
-  public var value: T {
-    set {
-      _value = newValue
-    }
-    get {
-      if _value == nil {
-        fatalError("Dynamic has no value defined at the moment!")
-      } else {
-        return _value!
-      }
-    }
-  }
-  
   public var valid: Bool {
     get {
-      return _value != nil
+      return backingValue != nil
     }
   }
   
@@ -139,12 +139,20 @@ public class Dynamic<T> {
     return bonds.count
   }
   
+  private init() {
+    backingValue = nil
+  }
+  
+  public init(_ value: T) {
+    backingValue = value
+  }
+  
   private func dispatch(value: T) {
     // lock
     self.dispatchInProgress = true
-
+    
     var emptyBoxes = [BondBox<T>]()
-
+    
     // dispatch change notifications
     for bondBox in self.bonds {
       if let bond = bondBox.bond {
@@ -154,24 +162,11 @@ public class Dynamic<T> {
         emptyBoxes.append(bondBox)
       }
     }
-
+    
     self.bonds.subtractInPlace(emptyBoxes)
-
+    
     // unlock
     self.dispatchInProgress = false
-  }
-  
-  public let valueBond = Bond<T>()
-  internal var bonds: Set<BondBox<T>> = Set()
-
-  private init() {
-    _value = nil
-    valueBond.listener = { [unowned self] v in self.value = v }
-  }
-
-  public init(_ v: T) {
-    _value = v
-    valueBond.listener = { [unowned self] v in self.value = v }
   }
   
   public func bindTo(bond: Bond<T>) {
@@ -185,6 +180,30 @@ public class Dynamic<T> {
   public func bindTo(bond: Bond<T>, fire: Bool, strongly: Bool) {
     bond.bind(self, fire: fire, strongly: strongly)
   }
+  
+}
+
+// MARK: Dynamic
+
+public class Dynamic<T>: Observable<T> {
+  
+  public let valueBond: Bond<T> = Bond()
+  
+  private override init() {
+    super.init()
+    valueBond.listener = { [unowned self] in self.value = $0 }
+  }
+  
+  public override init(_ value: T) {
+    super.init(value)
+    valueBond.listener = { [unowned self] in self.value = $0 }
+  }
+  
+  public init(_ value: T, listener: T -> ()) {
+    super.init(value)
+    valueBond.listener = { [unowned self] in self.value = $0 }
+  }
+  
 }
 
 public class InternalDynamic<T>: Dynamic<T> {
@@ -205,6 +224,10 @@ public class InternalDynamic<T>: Dynamic<T> {
 }
 
 // MARK: Protocols
+public protocol ObservableType {
+  typealias ObservableType
+  var designatedObservable: Observable<ObservableType> { get }
+}
 
 public protocol Dynamical {
   typealias DynamicType
@@ -224,37 +247,37 @@ extension Dynamic: Bondable {
 
 // MARK: Functional additions
 
-public extension Dynamic
+public extension Observable
 {
-  public func map<U>(f: T -> U) -> Dynamic<U> {
+  public func map<U>(f: T -> U) -> Observable<U> {
     return _map(self, f)
   }
   
-  public func filter(f: T -> Bool) -> Dynamic<T> {
+  public func filter(f: T -> Bool) -> Observable<T> {
     return _filter(self, f)
   }
   
-  public func filter(f: (T, T) -> Bool, _ v: T) -> Dynamic<T> {
+  public func filter(f: (T, T) -> Bool, _ v: T) -> Observable<T> {
     return _filter(self) { f($0, v) }
   }
   
-  public func rewrite<U>(v:  U) -> Dynamic<U> {
+  public func rewrite<U>(v:  U) -> Observable<U> {
     return _map(self) { _ in return v}
   }
   
-  public func zip<U>(v: U) -> Dynamic<(T, U)> {
+  public func zip<U>(v: U) -> Observable<(T, U)> {
     return _map(self) { ($0, v) }
   }
   
-  public func zip<U>(d: Dynamic<U>) -> Dynamic<(T, U)> {
+  public func zip<U>(d: Dynamic<U>) -> Observable<(T, U)> {
     return reduce(self, d) { ($0, $1) }
   }
   
-  public func skip(count: Int) -> Dynamic<T> {
+  public func skip(count: Int) -> Observable<T> {
     return _skip(self, count)
   }
     
-  public func throttle(seconds: Double, queue: dispatch_queue_t = dispatch_get_main_queue()) -> Dynamic<T> {
+  public func throttle(seconds: Double, queue: dispatch_queue_t = dispatch_get_main_queue()) -> Observable<T> {
     return _throttle(self, seconds, queue)
   }
 }

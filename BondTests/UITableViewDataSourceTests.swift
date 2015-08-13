@@ -129,7 +129,7 @@ class UITableViewDataSourceTests: XCTestCase {
   }
   
   func testReload() {
-    array.setArray([])
+    array.value = []
     expectedOperations.append(.ReloadData)
     XCTAssertEqual(expectedOperations, tableView.operations, "operation sequence did not match")
   }
