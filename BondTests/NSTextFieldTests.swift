@@ -72,11 +72,11 @@ class NSTextFieldTests: XCTestCase {
         dynamicDriver1.value = "c"
 
         XCTAssertEqual(dynamicDriver1.value, "c", "Value after change")
-        XCTAssertEqual(dynamicDriver2.value, "c", "Value after change")
+        XCTAssertEqual(dynamicDriver2.value, "a", "Value after change")
         
         dynamicDriver2.value = "y"
         
-        XCTAssertEqual(dynamicDriver1.value, "y", "Value after change")
+        XCTAssertEqual(dynamicDriver1.value, "c", "Value after change")
         XCTAssertEqual(dynamicDriver2.value, "y", "Value after change")
     }
 
