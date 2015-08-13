@@ -23,6 +23,39 @@ class ReduceTests: XCTestCase {
     XCTAssert(m.value == "2", "Value after dynamic change")
   }
   
+  func testFlatMap() {
+    class A {
+      let b = Dynamic<B>(B())
+    }
+    
+    class B {
+      var c = Dynamic<String>("hello")
+    }
+    
+    let d1 = Dynamic<A>(A())
+    let fm = d1.flatMap { $0.b }.flatMap { $0.c }
+    
+    XCTAssert(fm.value == "hello", "Initial value")
+    XCTAssert(fm.valid == true, "Should not be faulty")
+    
+    let a2 = A()
+    a2.b.value.c.value = "yello"
+    d1.value = a2
+    
+    XCTAssert(fm.value == "yello", "Value after parent dynamic change")
+    
+    let b3 = B()
+    b3.c.value = "another"
+    d1.value.b.value = b3
+    
+    XCTAssert(fm.value == "another", "Value after child dynamic change")
+    
+    let c4 = "yet another"
+    d1.value.b.value.c.value = c4
+    
+    XCTAssert(fm.value == "yet another", "Value after child of child dynamic change")
+  }
+  
   func testFilter() {
     let d1 = Dynamic<Int>(0)
     let f = d1.filter { $0 > 5 }

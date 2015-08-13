@@ -93,7 +93,7 @@ public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #default
   return dynamic
 }
 
-public func dynamicOptionalObservableFor<T>(object: NSObject, #keyPath: String, defaultValue: T? = nil) -> Dynamic<T?> {
+public func dynamicOptionalObservableFor<T>(object: NSObject, #keyPath: String, type: T.Type = T.self) -> Dynamic<T?> {
     return dynamicObservableFor(object, keyPath: keyPath, from: { (value: AnyObject?) -> T? in
         return value as? T
         }, to: { (value: T?) -> AnyObject? in
@@ -123,8 +123,18 @@ public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #from: A
   return dynamic
 }
 
-public func dynamicObservableFor<T>(notificationName: String, #object: AnyObject?, #parser: NSNotification -> T) -> InternalDynamic<T> {
+public func dynamicObservableFor<T>(notificationName: String, #object: AnyObject?, #parser: NSNotification -> T) -> Observable<T> {
+  return _dynamicObservableFor(notificationName, object: object, parser: parser)
+}
+
+public func dynamicObservableFor<T>(notificationName: String, #object: AnyObject?, #defaultValue: T, #parser: NSNotification -> T) -> Observable<T> {
+  return _dynamicObservableFor(notificationName, object: object, defaultValue: defaultValue, parser: parser)
+}
+
+internal func _dynamicObservableFor<T>(notificationName: String, #object: AnyObject?, defaultValue: T? = nil, #parser: NSNotification -> T) -> InternalDynamic<T> {
   let dynamic: InternalDynamic<T> = InternalDynamic()
+  
+  dynamic.backingValue = defaultValue
   
   let helper = DynamicNotificationCenterHelper(notificationName: notificationName, object: object) {
     [unowned dynamic] notification in
@@ -142,7 +152,7 @@ public extension Dynamic {
   }
   
   public class func asObservableFor(notificationName: String, object: AnyObject?, parser: NSNotification -> T) -> Dynamic<T> {
-    let dynamic: InternalDynamic<T> = dynamicObservableFor(notificationName, object: object, parser: parser)
+    let dynamic: InternalDynamic<T> = _dynamicObservableFor(notificationName, object: object, parser: parser)
     return dynamic
   }
 }

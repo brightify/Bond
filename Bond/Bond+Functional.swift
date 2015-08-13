@@ -54,6 +54,32 @@ internal func _map<T, U>(observable: Observable<T>, f: T -> U) -> Observable<U> 
   return dyn
 }
 
+// MARK: Flat map
+
+public func flatMap<T, U>(observable: Observable<T>, f: T -> Observable<U>) -> Observable<U> {
+  return _flatMap(observable, f)
+}
+
+public func flatMap<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, f: T -> Observable<U>) -> Observable<U> {
+  return _flatMap(dynamical.designatedDynamic, f)
+}
+
+internal func _flatMap<T, U>(observable: Observable<T>, f: T -> Observable<U>) -> Observable<U> {
+  let dyn = InternalDynamic<U>()
+  
+  if let value = observable.backingValue {
+    f(value).bindTo(dyn.valueBond, fire: true, strongly: false)
+  }
+  
+  let bond = Bond<T> { [unowned dyn] t in
+    f(t).bindTo(dyn.valueBond, fire: true, strongly: false)
+  }
+  dyn.retain(bond)
+  observable.bindTo(bond, fire: false)
+  
+  return dyn
+}
+
 // MARK: Filter
 
 public func filter<T>(observable: Observable<T>, f: T -> Bool) -> Observable<T> {

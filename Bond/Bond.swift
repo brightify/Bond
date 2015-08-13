@@ -255,6 +255,10 @@ public extension Observable
     return _map(self, f)
   }
   
+  public func flatMap<U>(f: T -> Observable<U>) -> Observable<U> {
+    return _flatMap(self, f)
+  }
+  
   public func filter(f: T -> Bool) -> Observable<T> {
     return _filter(self, f)
   }
