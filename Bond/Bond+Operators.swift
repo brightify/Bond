@@ -54,7 +54,6 @@ public func ->> <T, U: Bondable where U.BondType == T>(left: Observable<T>, righ
   left ->> right.designatedBond
 }
 
-
 // MARK: Bind only
 
 public func ->| <T>(left: Observable<T>, right: Bond<T>) {

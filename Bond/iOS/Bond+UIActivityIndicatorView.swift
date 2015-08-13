@@ -35,8 +35,7 @@ extension UIActivityIndicatorView: Bondable {
     if let d: AnyObject = objc_getAssociatedObject(self, &animatingDynamicHandleUIActivityIndicatorView) {
       return (d as? Dynamic<Bool>)!
     } else {
-      let d = InternalDynamic<Bool>(self.isAnimating())
-      let bond = Bond<Bool>() { [weak self] v in
+      let d = InternalDynamic<Bool>(self.isAnimating()) { [weak self] v in
         if let s = self {
           if v {
             s.startAnimating()
@@ -45,8 +44,6 @@ extension UIActivityIndicatorView: Bondable {
           }
         }
       }
-      d.bindTo(bond, fire: false, strongly: false)
-      d.retain(bond)
       objc_setAssociatedObject(self, &animatingDynamicHandleUIActivityIndicatorView, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
       return d
     }

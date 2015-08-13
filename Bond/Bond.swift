@@ -199,11 +199,6 @@ public class Dynamic<T>: Observable<T> {
     valueBond.listener = { [unowned self] in self.value = $0 }
   }
   
-  public init(_ value: T, listener: T -> ()) {
-    super.init(value)
-    valueBond.listener = { [unowned self] in self.value = $0 }
-  }
-  
 }
 
 public class InternalDynamic<T>: Dynamic<T> {
@@ -214,6 +209,13 @@ public class InternalDynamic<T>: Dynamic<T> {
   
   public override init(_ value: T) {
     super.init(value)
+  }
+  
+  public init(_ value: T, fire: Bool = false, listener: T -> ()) {
+    super.init(value)
+    let bond = Bond(listener)
+    bond.bind(self, fire: fire, strongly: false)
+    retain(bond)
   }
   
   public var updatingFromSelf: Bool = false
