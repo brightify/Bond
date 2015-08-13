@@ -68,16 +68,60 @@ internal func _flatMap<T, U>(observable: Observable<T>, f: T -> Observable<U>) -
   let dyn = InternalDynamic<U>()
   
   if let value = observable.backingValue {
-    f(value).bindTo(dyn.valueBond, fire: true, strongly: false)
+    f(value) ->> dyn
   }
   
   let bond = Bond<T> { [unowned dyn] t in
-    f(t).bindTo(dyn.valueBond, fire: true, strongly: false)
+    f(t) ->> dyn
   }
   dyn.retain(bond)
   observable.bindTo(bond, fire: false)
   
   return dyn
+}
+
+public func flatMapTwoWay<T, U>(observable: Observable<T>, f: T -> Dynamic<U>) -> Dynamic<U> {
+  return _flatMapTwoWay(observable, f)
+}
+
+public func flatMapTwoWay<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, f: T -> Dynamic<U>) -> Dynamic<U> {
+  return _flatMapTwoWay(dynamical.designatedDynamic, f)
+}
+
+internal func _flatMapTwoWay<T, U>(observable: Observable<T>, f: T -> Dynamic<U>) -> Dynamic<U> {
+  let inputBridge = InternalDynamic<U>()
+  let outputBridge = InternalDynamic<U>()
+  
+  let inputBond = Bond<U> { [weak outputBridge] input in
+    outputBridge?.value = input
+  }
+  let outputBond = Bond<U> { [weak inputBridge] output in
+    inputBridge?.value = output
+  }
+  
+  inputBridge.bindTo(inputBond, fire: false, strongly: false)
+  inputBridge.retain(inputBond)
+  
+  outputBridge.bindTo(outputBond, fire: false, strongly: false)
+  outputBridge.retain(outputBond)
+  
+  outputBridge.retain(inputBridge)
+  
+  if let value = observable.backingValue {
+    // Otherwise we would get a warning in the console every time
+    inputBridge.valueBond.unbind(twoWayUnbindIntentional: true)
+    f(value) <->> inputBridge
+  }
+  
+  let bond = Bond<T> { [unowned inputBridge] t in
+    // Otherwise we would get a warning in the console every time
+    inputBridge.valueBond.unbind(twoWayUnbindIntentional: true)
+    f(t) <->> inputBridge
+  }
+  outputBridge.retain(bond)
+  observable.bindTo(bond, fire: false)
+  
+  return outputBridge
 }
 
 // MARK: Filter

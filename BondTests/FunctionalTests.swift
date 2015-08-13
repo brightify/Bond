@@ -23,6 +23,36 @@ class ReduceTests: XCTestCase {
     XCTAssert(m.value == "2", "Value after dynamic change")
   }
   
+  func testObservableFlatMap() {
+    class A {
+      let b = Observable<B>(B())
+    }
+
+    class B {
+      let c = Observable<String>("hello")
+    }
+    
+    let o1 = Observable<A>(A())
+    let fm = o1.flatMap { $0.b }.flatMap { $0.c }
+    
+    let a2 = A()
+    a2.b.value.c.value = "yello"
+    o1.value = a2
+  
+    XCTAssert(fm.value == "yello", "Value after parent observable change")
+    
+    let b3 = B()
+    b3.c.value = "another"
+    o1.value.b.value = b3
+    
+    XCTAssert(fm.value == "another", "Value after child observable change")
+    
+    let c4 = "yet another"
+    o1.value.b.value.c.value = c4
+    
+    XCTAssert(fm.value == "yet another", "Value after child of child observable change")
+  }
+  
   func testFlatMap() {
     class A {
       let b = Dynamic<B>(B())
@@ -54,6 +84,40 @@ class ReduceTests: XCTestCase {
     d1.value.b.value.c.value = c4
     
     XCTAssert(fm.value == "yet another", "Value after child of child dynamic change")
+  }
+  
+  func testDynamicFlatMapTwoWayBinding() {
+    class A {
+      let b = Dynamic<B>(B())
+    }
+
+    class B {
+      let c = Dynamic<String>("hello")
+    }
+    
+    let d1 = Dynamic<A>(A())
+    let fm = d1.flatMap { $0.b }.flatMapTwoWay { $0.c }
+  
+    XCTAssert(fm.value == "hello", "Initial value")
+    XCTAssert(fm.valid == true, "Should not be faulty")
+    
+    let d2 = Dynamic<String>("yello")
+
+    d2 <->> fm
+    
+    XCTAssert(fm.value == "yello", "Value in flatMap after a two way bind")
+    XCTAssert(d1.value.b.value.c.value == "yello", "Value in real dynamic after a two way bind")
+
+    d2.value = "another"
+
+    XCTAssert(fm.value == "another", "Value in flatMap after bound dynamic change")
+    XCTAssert(d1.value.b.value.c.value == "another", "Value in real dynamic after bound dynamic change")
+
+    let c4 = "yet another"
+    d1.value.b.value.c.value = c4
+    
+    XCTAssert(fm.value == "yet another", "Value after child of child dynamic change")
+    XCTAssert(d2.value == "yet another", "Value in bound dynamic after a child of child dynamic change")
   }
   
   func testFilter() {

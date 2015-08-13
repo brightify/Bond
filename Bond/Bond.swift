@@ -79,7 +79,7 @@ public class Bond<T> {
     }
   }
   
-  public func unbind() {
+  public func unbind(twoWayUnbindIntentional: Bool = false) {
     let boxedSelf = BondBox(self)
     boundObservable?.bonds.remove(boxedSelf)
 
@@ -90,7 +90,9 @@ public class Bond<T> {
     
     if let boundDynamic = boundDynamic, let otherBoundDynamic = boundDynamic.valueBond.boundObservable as? Dynamic {
       if otherBoundDynamic.valueBond == self {
-        println("WARNING: A two-way binding was unbinded because of a new binding to bond \(self)")
+        if !twoWayUnbindIntentional {
+          println("WARNING: A two-way binding was unbinded because of a new binding to bond \(self)")
+        }
         boundDynamic.valueBond.unbind()
       }
     }
@@ -211,6 +213,13 @@ public class InternalDynamic<T>: Dynamic<T> {
     super.init(value)
   }
   
+  public init(listener: T -> ()) {
+    super.init()
+    let bond = Bond(listener)
+    bond.bind(self, fire: false, strongly: false)
+    retain(bond)
+  }
+  
   public init(_ value: T, fire: Bool = false, listener: T -> ()) {
     super.init(value)
     let bond = Bond(listener)
@@ -257,6 +266,10 @@ public extension Observable
   
   public func flatMap<U>(f: T -> Observable<U>) -> Observable<U> {
     return _flatMap(self, f)
+  }
+  
+  public func flatMapTwoWay<U>(f: T -> Dynamic<U>) -> Dynamic<U> {
+    return _flatMapTwoWay(self, f)
   }
   
   public func filter(f: T -> Bool) -> Observable<T> {
