@@ -59,7 +59,22 @@ class SegmentedControlDynamic<T>: InternalDynamic<UIControlEvents>
   }
 }
 
+class SegmentedControlSelectedIndexDynamic<T>: InternalDynamic<Int> {
+  let helper: SegmentedControlDynamicHelper
+  
+  init(control: UISegmentedControl, initialValue: Int) {
+    helper = SegmentedControlDynamicHelper(control: control)
+    super.init(initialValue)
+    helper.listener = { [unowned self, unowned control] _ in
+      self.updatingFromSelf = true
+      self.value = control.selectedSegmentIndex
+      self.updatingFromSelf = false
+    }
+  }
+}
+
 private var eventDynamicHandleUISegmentedControl: UInt8 = 0;
+private var selectedSegmentIndexDynamicHandleUISegmentedControl: UInt8 = 0;
 
 extension UISegmentedControl /*: Dynamical, Bondable */ {
   
@@ -70,6 +85,23 @@ extension UISegmentedControl /*: Dynamical, Bondable */ {
       let d = SegmentedControlDynamic<UIControlEvents>(control: self)
       objc_setAssociatedObject(self, &eventDynamicHandleUISegmentedControl, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
       return d
+    }
+  }
+  
+  public var dynSelectedSegmentIndex: Dynamic<Int> {
+    if let dynamic = objc_getAssociatedObject(self, &selectedSegmentIndexDynamicHandleUISegmentedControl) as? Dynamic<Int> {
+      return dynamic
+    } else {
+      let dynamic = SegmentedControlSelectedIndexDynamic<Int>(control: self, initialValue: selectedSegmentIndex)
+      let bond = Bond<Int>() { [weak self, weak dynamic] in
+        if let s = self, dynamic = dynamic where !dynamic.updatingFromSelf {
+          s.selectedSegmentIndex = $0
+        }
+      }
+      dynamic.bindTo(bond, fire: false, strongly: false)
+      dynamic.retain(bond)
+      objc_setAssociatedObject(self, &selectedSegmentIndexDynamicHandleUISegmentedControl, dynamic, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      return dynamic
     }
   }
   

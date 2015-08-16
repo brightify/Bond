@@ -29,5 +29,30 @@ class UISegmentedControlTests: XCTestCase {
     segmentedControl.sendActionsForControlEvents(.ValueChanged)
     XCTAssert(observedValue == UIControlEvents.ValueChanged, "Dynamic change passes test - should update observedValue")
   }
+  
+  func testUISegmentedControlSelectedIndexDynamic() {
+    let segmentedControl = UISegmentedControl(items: ["One", "Two", "Three"])
+    
+    var observedValue = -1000
+    let bond = Bond<Int>() { observedValue = $0 }
+    
+    XCTAssert(segmentedControl.dynSelectedSegmentIndex.valid == true, "Should be valid initially")
+    
+    segmentedControl.dynSelectedSegmentIndex ->> bond
+    XCTAssert(observedValue == -1, "Value after binding should be changed")
+    
+    segmentedControl.selectedSegmentIndex = 0
+    segmentedControl.sendActionsForControlEvents(UIControlEvents.ValueChanged)
+    XCTAssert(observedValue == 0, "Dynamic changes when an event is sent")
+    
+    let observable = Observable(1)
+    observable ->> segmentedControl.dynSelectedSegmentIndex
+    XCTAssert(observedValue == 1, "Binding an observable to the segmented control dynamic should fire the observing bond")
+    XCTAssert(segmentedControl.selectedSegmentIndex == 1, "Binding an observable to the segmented control dynamic should change the selected segment index")
+    
+    observable.value = 2
+    XCTAssert(observedValue == 2, "Changing the bound observable value should fire the bound bond.")
+    XCTAssert(segmentedControl.selectedSegmentIndex == 2, "Changing the bound observable value should change the selected segment index")
+  }
 }
 
