@@ -13,7 +13,7 @@ import Bond
 class UILabelTests: XCTestCase {
     
   func testUILabelBond() {
-    var dynamicDriver = Dynamic<String>("b")
+    let dynamicDriver = Dynamic<String>("b")
     let label = UILabel()
         
     label.text = "a"
@@ -27,22 +27,22 @@ class UILabelTests: XCTestCase {
   }
     
   func testUILabelAttributedTextBond() {
-    var dynamicDriver = Dynamic<NSAttributedString>(NSAttributedString(string: "b"))
+    let dynamicDriver = Dynamic<NSAttributedString>(NSAttributedString(string: "b"))
     let label = UILabel()
         
     label.text = "a"
     XCTAssert(label.text == "a", "Initial value")
         
     dynamicDriver ->> label.dynAttributedText
-    XCTAssert(label.attributedText.string == "b", "Value after binding")
+    XCTAssert(label.attributedText?.string == "b", "Value after binding")
         
     dynamicDriver.value = NSAttributedString(string: "c")
-    XCTAssert(label.attributedText.string == "c", "Value after dynamic change")
+    XCTAssert(label.attributedText?.string == "c", "Value after dynamic change")
   }
     
   func testUILabelTextColorBond() {
-    var dynamicDriver = Dynamic<UIColor>(UIColor.blackColor())
-    var label = UILabel()
+    let dynamicDriver = Dynamic<UIColor>(UIColor.blackColor())
+    let label = UILabel()
         
     label.textColor = UIColor.redColor()
     XCTAssert(label.textColor == UIColor.redColor(), "Initial Value")

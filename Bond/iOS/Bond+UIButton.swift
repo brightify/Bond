@@ -27,13 +27,14 @@
 
 import UIKit
 
-@objc class ButtonDynamicHelper
+@objc class ButtonDynamicHelper: NSObject
 {
   weak var control: UIButton?
   var listener: (UIControlEvents -> Void)?
   
   init(control: UIButton) {
     self.control = control
+    super.init()
     control.addTarget(self, action: Selector("touchDown:"), forControlEvents: .TouchDown)
     control.addTarget(self, action: Selector("touchUpInside:"), forControlEvents: .TouchUpInside)
     control.addTarget(self, action: Selector("touchUpOutside:"), forControlEvents: .TouchUpOutside)
@@ -86,7 +87,7 @@ extension UIButton /*: Dynamical, Bondable */ {
       return (d as? Dynamic<UIControlEvents>)!
     } else {
       let d = ButtonDynamic<UIControlEvents>(control: self)
-      objc_setAssociatedObject(self, &eventDynamicHandleUIButton, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &eventDynamicHandleUIButton, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }
@@ -96,7 +97,7 @@ extension UIButton /*: Dynamical, Bondable */ {
       return (d as? Dynamic<Bool>)!
     } else {
       let d = InternalDynamic<Bool>(self.enabled) { [weak self] v in if let s = self { s.enabled = v } }
-      objc_setAssociatedObject(self, &enabledDynamicHandleUIButton, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &enabledDynamicHandleUIButton, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }
@@ -106,7 +107,7 @@ extension UIButton /*: Dynamical, Bondable */ {
       return (d as? Dynamic<String>)!
     } else {
       let d = InternalDynamic<String>(self.titleLabel?.text ?? "") { [weak self] v in if let s = self { s.setTitle(v, forState: .Normal) } }
-      objc_setAssociatedObject(self, &titleDynamicHandleUIButton, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &titleDynamicHandleUIButton, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }
@@ -116,7 +117,7 @@ extension UIButton /*: Dynamical, Bondable */ {
       return (d as? Dynamic<UIImage?>)!
     } else {
       let d = InternalDynamic<UIImage?>(self.imageForState(.Normal)) { [weak self] img in if let s = self { s.setImage(img, forState: .Normal) } }
-      objc_setAssociatedObject(self, &imageForNormalStateDynamicHandleUIButton, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &imageForNormalStateDynamicHandleUIButton, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }

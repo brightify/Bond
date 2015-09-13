@@ -57,7 +57,7 @@ public struct ObservableArrayGenerator<T>: GeneratorType {
     self.array = array
   }
   
-  typealias Element = T
+  public typealias Element = T
   
   public mutating func next() -> T? {
     index++
@@ -231,7 +231,7 @@ public class MutableObservableArray<T>: ObservableArray<T> {
     if array.count > 0 {
       let indices = Array(i..<i+array.count)
       dispatchWillInsert(indices)
-      noEventValue.splice(array, atIndex: i)
+      noEventValue.insertContentsOf(array, at: i)
       dispatchDidInsert(indices)
     }
   }
@@ -382,16 +382,18 @@ private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
   }
 }
 
-func indexOfFirstEqualOrLargerThan(x: Int, array: [Int]) -> Int {
-  var idx: Int = -1
-  for (index, element) in enumerate(array) {
-    if element < x {
-      idx = index
-    } else {
-      break
+private extension SequenceType where Generator.Element == Int {
+  func indexOfFirstEqualOrLargerThan(x: Int) -> Int {
+    var idx: Int = -1
+    for (index, element) in self.enumerate() {
+      if element < x {
+        idx = index
+      } else {
+        break
+      }
     }
+    return idx + 1
   }
-  return idx + 1
 }
 
 // MARK: Dynamic Array Filter Proxy
@@ -418,7 +420,7 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
       
       for idx in indices {
 
-        for (index, element) in enumerate(pointers) {
+        for (index, element) in pointers.enumerate() {
           if element >= idx {
             pointers[index] = element + 1
           }
@@ -426,7 +428,7 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
         
         let element = array[idx]
         if filterf(element) {
-          let position = indexOfFirstEqualOrLargerThan(idx, pointers)
+          let position = pointers.indexOfFirstEqualOrLargerThan(idx)
           pointers.insert(idx, atIndex: position)
           insertedIndices.append(position)
         }
@@ -447,14 +449,14 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
       var removedIndices: [Int] = []
       var pointers = self.pointers
       
-      for idx in reverse(indices) {
+      for idx in indices.reverse() {
         
-        if let idx = find(pointers, idx) {
+        if let idx = pointers.indexOf(idx) {
           pointers.removeAtIndex(idx)
           removedIndices.append(idx)
         }
         
-        for (index, element) in enumerate(pointers) {
+        for (index, element) in pointers.enumerate() {
           if element >= idx {
             pointers[index] = element - 1
           }
@@ -462,13 +464,13 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
       }
       
       if removedIndices.count > 0 {
-        self.dispatchWillRemove(reverse(removedIndices))
+        self.dispatchWillRemove(removedIndices.reverse())
       }
       
       self.pointers = pointers
       
       if removedIndices.count > 0 {
-        self.dispatchDidRemove(reverse(removedIndices))
+        self.dispatchDidRemove(removedIndices.reverse())
       }
     }
     
@@ -482,7 +484,7 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
       var updatedIndices: [Int] = []
       var pointers = self.pointers
       
-      if let idx = find(pointers, idx) {
+      if let idx = pointers.indexOf(idx) {
         if filterf(element) {
           // update
           updatedIndices.append(idx)
@@ -493,7 +495,7 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
         }
       } else {
         if filterf(element) {
-          let position = indexOfFirstEqualOrLargerThan(idx, pointers)
+          let position = pointers.indexOfFirstEqualOrLargerThan(idx)
           pointers.insert(idx, atIndex: position)
           insertedIndices.append(position)
         } else {
@@ -540,7 +542,7 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
   
   class func pointersFromSource(sourceArray: ObservableArray<T>, filterf: T -> Bool) -> [Int] {
     var pointers = [Int]()
-    for (index, element) in enumerate(sourceArray) {
+    for (index, element) in sourceArray.enumerate() {
       if filterf(element) {
         pointers.append(index)
       }
@@ -718,13 +720,13 @@ public extension ObservableArray
 
 // MARK: Map
 
-private func _map<T, U>(dynamicArray: ObservableArray<T>, f: (T, Int) -> U) -> ObservableArrayMapProxy<T, U> {
+private func _map<T, U>(dynamicArray: ObservableArray<T>, _ f: (T, Int) -> U) -> ObservableArrayMapProxy<T, U> {
   return ObservableArrayMapProxy(sourceArray: dynamicArray, mapf: f)
 }
 
 // MARK: Filter
 
-private func _filter<T>(dynamicArray: ObservableArray<T>, f: T -> Bool) -> ObservableArray<T> {
+private func _filter<T>(dynamicArray: ObservableArray<T>, _ f: T -> Bool) -> ObservableArray<T> {
   return ObservableArrayFilterProxy(sourceArray: dynamicArray, filterf: f)
 }
 

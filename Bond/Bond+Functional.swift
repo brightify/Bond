@@ -29,15 +29,15 @@ import QuartzCore
 
 // MARK: Map
 
-public func map<T, U>(observable: Observable<T>, f: T -> U) -> Observable<U> {
+public func map<T, U>(observable: Observable<T>, _ f: T -> U) -> Observable<U> {
   return _map(observable, f)
 }
 
-public func map<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, f: T -> U) -> Observable<U> {
+public func map<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, _ f: T -> U) -> Observable<U> {
   return _map(dynamical.designatedDynamic, f)
 }
 
-internal func _map<T, U>(observable: Observable<T>, f: T -> U) -> Observable<U> {
+internal func _map<T, U>(observable: Observable<T>, _ f: T -> U) -> Observable<U> {
   let dyn = InternalDynamic<U>()
   
   if let value = observable.backingValue {
@@ -56,15 +56,15 @@ internal func _map<T, U>(observable: Observable<T>, f: T -> U) -> Observable<U> 
 
 // MARK: Flat map
 
-public func flatMap<T, U>(observable: Observable<T>, f: T -> Observable<U>) -> Observable<U> {
+public func flatMap<T, U>(observable: Observable<T>, _ f: T -> Observable<U>) -> Observable<U> {
   return _flatMap(observable, f)
 }
 
-public func flatMap<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, f: T -> Observable<U>) -> Observable<U> {
+public func flatMap<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, _ f: T -> Observable<U>) -> Observable<U> {
   return _flatMap(dynamical.designatedDynamic, f)
 }
 
-internal func _flatMap<T, U>(observable: Observable<T>, f: T -> Observable<U>) -> Observable<U> {
+internal func _flatMap<T, U>(observable: Observable<T>, _ f: T -> Observable<U>) -> Observable<U> {
   let dyn = InternalDynamic<U>()
   
   if let value = observable.backingValue {
@@ -80,15 +80,15 @@ internal func _flatMap<T, U>(observable: Observable<T>, f: T -> Observable<U>) -
   return dyn
 }
 
-public func flatMapTwoWay<T, U>(observable: Observable<T>, f: T -> Dynamic<U>) -> Dynamic<U> {
+public func flatMapTwoWay<T, U>(observable: Observable<T>, _ f: T -> Dynamic<U>) -> Dynamic<U> {
   return _flatMapTwoWay(observable, f)
 }
 
-public func flatMapTwoWay<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, f: T -> Dynamic<U>) -> Dynamic<U> {
+public func flatMapTwoWay<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, _ f: T -> Dynamic<U>) -> Dynamic<U> {
   return _flatMapTwoWay(dynamical.designatedDynamic, f)
 }
 
-internal func _flatMapTwoWay<T, U>(observable: Observable<T>, f: T -> Dynamic<U>) -> Dynamic<U> {
+internal func _flatMapTwoWay<T, U>(observable: Observable<T>, _ f: T -> Dynamic<U>) -> Dynamic<U> {
   let inputBridge = InternalDynamic<U>()
   let outputBridge = InternalDynamic<U>()
   
@@ -126,19 +126,19 @@ internal func _flatMapTwoWay<T, U>(observable: Observable<T>, f: T -> Dynamic<U>
 
 // MARK: Filter
 
-public func filter<T>(observable: Observable<T>, f: T -> Bool) -> Observable<T> {
+public func filter<T>(observable: Observable<T>, _ f: T -> Bool) -> Observable<T> {
   return _filter(observable, f)
 }
 
-public func filter<T>(observable: Observable<T>, f: (T, T) -> Bool, v: T) -> Observable<T> {
+public func filter<T>(observable: Observable<T>, _ f: (T, T) -> Bool, _ v: T) -> Observable<T> {
   return _filter(observable) { f($0, v) }
 }
 
-public func filter<S: Dynamical, T where S.DynamicType == T>(dynamical: S, f: T -> Bool) -> Observable<T> {
+public func filter<S: Dynamical, T where S.DynamicType == T>(dynamical: S, _ f: T -> Bool) -> Observable<T> {
   return _filter(dynamical.designatedDynamic, f)
 }
 
-internal func _filter<T>(observable: Observable<T>, f: T -> Bool) -> Observable<T> {
+internal func _filter<T>(observable: Observable<T>, _ f: T -> Bool) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
   if let value = observable.backingValue {
@@ -161,15 +161,15 @@ internal func _filter<T>(observable: Observable<T>, f: T -> Bool) -> Observable<
 
 // MARK: Reduce
 
-public func reduce<A, B, T>(oA: Observable<A>, oB: Observable<B>, f: (A, B) -> T) -> Observable<T> {
+public func reduce<A, B, T>(oA: Observable<A>, _ oB: Observable<B>, _ f: (A, B) -> T) -> Observable<T> {
   return _reduce(oA, oB, f)
 }
 
-public func reduce<A, B, C, T>(oA: Observable<A>, oB: Observable<B>, oC: Observable<C>, f: (A, B, C) -> T) -> Observable<T> {
+public func reduce<A, B, C, T>(oA: Observable<A>, _ oB: Observable<B>, _ oC: Observable<C>, _ f: (A, B, C) -> T) -> Observable<T> {
   return _reduce(oA, oB, oC, f)
 }
 
-public func _reduce<A, B, T>(oA: Observable<A>, oB: Observable<B>, f: (A, B) -> T) -> Observable<T> {
+public func _reduce<A, B, T>(oA: Observable<A>, _ oB: Observable<B>, _ f: (A, B) -> T) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
   if let vA = oA.backingValue, let vB = oB.backingValue {
@@ -197,7 +197,7 @@ public func _reduce<A, B, T>(oA: Observable<A>, oB: Observable<B>, f: (A, B) -> 
   return dyn
 }
 
-internal func _reduce<A, B, C, T>(oA: Observable<A>, oB: Observable<B>, oC: Observable<C>, f: (A, B, C) -> T) -> Observable<T> {
+internal func _reduce<A, B, C, T>(oA: Observable<A>, _ oB: Observable<B>, _ oC: Observable<C>, _ f: (A, B, C) -> T) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
   if let vA = oA.backingValue, let vB = oB.backingValue, let vC = oC.backingValue {
@@ -229,23 +229,23 @@ internal func _reduce<A, B, C, T>(oA: Observable<A>, oB: Observable<B>, oC: Obse
 
 // MARK: Rewrite
 
-public func rewrite<T, U>(observable: Observable<T>, value: U) -> Observable<U> {
+public func rewrite<T, U>(observable: Observable<T>, _ value: U) -> Observable<U> {
   return _map(observable) { _ in value }
 }
 
 // MARK: Zip
 
-public func zip<T, U>(observable: Observable<T>, value: U) -> Observable<(T, U)> {
+public func zip<T, U>(observable: Observable<T>, _ value: U) -> Observable<(T, U)> {
   return _map(observable) { ($0, value) }
 }
 
-public func zip<T, U>(o1: Observable<T>, o2: Observable<U>) -> Observable<(T, U)> {
+public func zip<T, U>(o1: Observable<T>, _ o2: Observable<U>) -> Observable<(T, U)> {
   return reduce(o1, o2) { ($0, $1) }
 }
 
 // MARK: Skip
 
-internal func _skip<T>(observable: Observable<T>, var count: Int) -> Observable<T> {
+internal func _skip<T>(observable: Observable<T>, var _ count: Int) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
   if count <= 0 {
@@ -266,7 +266,7 @@ internal func _skip<T>(observable: Observable<T>, var count: Int) -> Observable<
   return dyn
 }
 
-public func skip<T>(observable: Observable<T>, count: Int) -> Observable<T> {
+public func skip<T>(observable: Observable<T>, _ count: Int) -> Observable<T> {
   return _skip(observable, count)
 }
 
@@ -276,7 +276,7 @@ public func any<T>(observables: [Observable<T>]) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   
   for observable in observables {
-    let bond = Bond<T> { [unowned observable] in
+    let bond = Bond<T> { [unowned dyn] in
       dyn.value = $0
     }
     observable.bindTo(bond, fire: false)
@@ -288,7 +288,7 @@ public func any<T>(observables: [Observable<T>]) -> Observable<T> {
 
 // MARK: Throttle
 
-internal func _throttle<T>(observable: Observable<T>, seconds: Double, queue: dispatch_queue_t) -> Observable<T> {
+internal func _throttle<T>(observable: Observable<T>, _ seconds: Double, _ queue: dispatch_queue_t) -> Observable<T> {
   let dyn = InternalDynamic<T>()
   var shouldDispatch: Bool = true
   
@@ -311,7 +311,7 @@ internal func _throttle<T>(observable: Observable<T>, seconds: Double, queue: di
   return dyn
 }
 
-public func throttle<T>(observable: Observable<T>, seconds: Double, queue: dispatch_queue_t = dispatch_get_main_queue()) -> Observable<T> {
+public func throttle<T>(observable: Observable<T>, _ seconds: Double, _ queue: dispatch_queue_t = dispatch_get_main_queue()) -> Observable<T> {
     return _throttle(observable, seconds, queue)
 }
 

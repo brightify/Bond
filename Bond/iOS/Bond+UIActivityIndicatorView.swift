@@ -44,7 +44,7 @@ extension UIActivityIndicatorView: Bondable {
           }
         }
       }
-      objc_setAssociatedObject(self, &animatingDynamicHandleUIActivityIndicatorView, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &animatingDynamicHandleUIActivityIndicatorView, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }

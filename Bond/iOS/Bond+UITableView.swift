@@ -92,12 +92,8 @@ extension NSIndexSet {
     }
   }
   
-  func sectionIndexTitlesForTableView(tableView: UITableView) -> [AnyObject]! {
-    if let ds = self.nextDataSource {
-      return ds.sectionIndexTitlesForTableView?(tableView) ?? []
-    } else {
-      return []
-    }
+  func sectionIndexTitlesForTableView(tableView: UITableView) -> [String]? {
+    return self.nextDataSource?.sectionIndexTitlesForTableView?(tableView) ?? []
   }
   
   func tableView(tableView: UITableView, sectionForSectionIndexTitle title: String, atIndex index: Int) -> Int {
@@ -194,7 +190,7 @@ public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableView
             tableView.beginUpdates()
             tableView.insertSections(NSIndexSet(array: i), withRowAnimation: UITableViewRowAnimation.Automatic)
             
-            for section in sorted(i, <) {
+            for section in i.sort(<) {
               let sectionBond = UITableViewDataSourceSectionBond<Void>(tableView: tableView, section: section, disableAnimation: disableAnimation)
               let sectionObservable = array[section]
               sectionObservable.bindTo(sectionBond)
@@ -217,7 +213,7 @@ public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableView
           perform(animated: !disableAnimation) {
             tableView.beginUpdates()
             tableView.deleteSections(NSIndexSet(array: i), withRowAnimation: UITableViewRowAnimation.Automatic)
-            for section in sorted(i, >) {
+            for section in i.sort(>) {
               s.sectionBonds[section].unbind()
               s.sectionBonds.removeAtIndex(section)
               
@@ -298,13 +294,13 @@ extension UITableView /*: Bondable */ {
       return (d as? UITableViewDataSourceBond<UITableViewCell>)!
     } else {
       let bond = UITableViewDataSourceBond<UITableViewCell>(tableView: self, disableAnimation: false)
-      objc_setAssociatedObject(self, &bondDynamicHandleUITableView, bond, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &bondDynamicHandleUITableView, bond, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return bond
     }
   }
 }
 
-private func perform(#animated: Bool, block: () -> Void) {
+private func perform(animated animated: Bool, block: () -> Void) {
   if !animated {
     UIView.performWithoutAnimation(block)
   } else {

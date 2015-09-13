@@ -38,7 +38,7 @@ extension UIBarItem: Bondable {
       return (d as? Dynamic<Bool>)!
     } else {
       let d = InternalDynamic<Bool>(self.enabled) { [weak self] v in if let s = self { s.enabled = v } }
-      objc_setAssociatedObject(self, &enabledDynamicHandleUIBarItem, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &enabledDynamicHandleUIBarItem, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }
@@ -48,7 +48,7 @@ extension UIBarItem: Bondable {
       return (d as? Dynamic<String>)!
     } else {
       let d = InternalDynamic<String>(self.title ?? "") { [weak self] v in if let s = self { s.title = v } }
-      objc_setAssociatedObject(self, &titleDynamicHandleUIBarItem, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &titleDynamicHandleUIBarItem, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }
@@ -58,7 +58,7 @@ extension UIBarItem: Bondable {
       return (d as? Dynamic<UIImage?>)!
     } else {
       let d = InternalDynamic<UIImage?>(self.image) { [weak self] img in if let s = self { s.image = img } }
-      objc_setAssociatedObject(self, &imageDynamicHandleUIBarItem, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &imageDynamicHandleUIBarItem, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }

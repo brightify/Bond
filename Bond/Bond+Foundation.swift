@@ -47,9 +47,9 @@ private var XXContext = 0
     object?.removeObserver(self, forKeyPath: keyPath)
   }
   
-  override dynamic func observeValueForKeyPath(keyPath: String, ofObject object: AnyObject, change: [NSObject : AnyObject], context: UnsafeMutablePointer<Void>) {
+  override dynamic func observeValueForKeyPath(keyPath: String?, ofObject object: AnyObject?, change: [String : AnyObject]?, context: UnsafeMutablePointer<Void>) {
     if context == &XXContext {
-      if let newValue: AnyObject = change[NSKeyValueChangeNewKey] {
+      if let newValue = change?[NSKeyValueChangeNewKey] {
         listener(newValue)
       }
     }
@@ -74,7 +74,7 @@ private var XXContext = 0
   }
 }
 
-public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #defaultValue: T) -> Dynamic<T> {
+public func dynamicObservableFor<T>(object: NSObject, keyPath: String, defaultValue: T) -> Dynamic<T> {
   let keyPathValue: AnyObject? = object.valueForKeyPath(keyPath)
   let value: T = (keyPathValue != nil) ? (keyPathValue as? T)! : defaultValue
   let dynamic = InternalDynamic(value)
@@ -93,7 +93,7 @@ public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #default
   return dynamic
 }
 
-public func dynamicOptionalObservableFor<T>(object: NSObject, #keyPath: String, type: T.Type = T.self) -> Dynamic<T?> {
+public func dynamicOptionalObservableFor<T>(object: NSObject, keyPath: String, type: T.Type = T.self) -> Dynamic<T?> {
     return dynamicObservableFor(object, keyPath: keyPath, from: { (value: AnyObject?) -> T? in
         return value as? T
         }, to: { (value: T?) -> AnyObject? in
@@ -101,7 +101,7 @@ public func dynamicOptionalObservableFor<T>(object: NSObject, #keyPath: String, 
     })
 }
 
-public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #from: AnyObject? -> T, #to: T -> AnyObject?) -> Dynamic<T> {
+public func dynamicObservableFor<T>(object: NSObject, keyPath: String, from: AnyObject? -> T, to: T -> AnyObject?) -> Dynamic<T> {
   let keyPathValue: AnyObject? = object.valueForKeyPath(keyPath)
   let dynamic = InternalDynamic(from(keyPathValue))
   
@@ -123,15 +123,15 @@ public func dynamicObservableFor<T>(object: NSObject, #keyPath: String, #from: A
   return dynamic
 }
 
-public func dynamicObservableFor<T>(notificationName: String, #object: AnyObject?, #parser: NSNotification -> T) -> Observable<T> {
+public func dynamicObservableFor<T>(notificationName: String, object: AnyObject?, parser: NSNotification -> T) -> Observable<T> {
   return _dynamicObservableFor(notificationName, object: object, parser: parser)
 }
 
-public func dynamicObservableFor<T>(notificationName: String, #object: AnyObject?, #defaultValue: T, #parser: NSNotification -> T) -> Observable<T> {
+public func dynamicObservableFor<T>(notificationName: String, object: AnyObject?, defaultValue: T, parser: NSNotification -> T) -> Observable<T> {
   return _dynamicObservableFor(notificationName, object: object, defaultValue: defaultValue, parser: parser)
 }
 
-internal func _dynamicObservableFor<T>(notificationName: String, #object: AnyObject?, defaultValue: T? = nil, #parser: NSNotification -> T) -> InternalDynamic<T> {
+internal func _dynamicObservableFor<T>(notificationName: String, object: AnyObject?, defaultValue: T? = nil, parser: NSNotification -> T) -> InternalDynamic<T> {
   let dynamic: InternalDynamic<T> = InternalDynamic()
   
   dynamic.backingValue = defaultValue

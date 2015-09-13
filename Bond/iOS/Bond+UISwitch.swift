@@ -27,13 +27,14 @@
 
 import UIKit
 
-@objc class SwitchDynamicHelper
+@objc class SwitchDynamicHelper: NSObject
 {
   weak var control: UISwitch?
   var listener: (Bool -> Void)?
   
   init(control: UISwitch) {
     self.control = control
+    super.init()
     control.addTarget(self, action: Selector("valueChanged:"), forControlEvents: .ValueChanged)
   }
   
@@ -78,7 +79,7 @@ extension UISwitch /*: Dynamical, Bondable */ {
       
       d.bindTo(bond, fire: false, strongly: false)
       d.retain(bond)
-      objc_setAssociatedObject(self, &onDynamicHandleUISwitch, d, objc_AssociationPolicy(OBJC_ASSOCIATION_RETAIN_NONATOMIC))
+      objc_setAssociatedObject(self, &onDynamicHandleUISwitch, d, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return d
     }
   }

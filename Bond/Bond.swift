@@ -79,7 +79,7 @@ public class Bond<T> {
     }
   }
   
-  public func unbind(twoWayUnbindIntentional: Bool = false) {
+  public func unbind(twoWayUnbindIntentional twoWayUnbindIntentional: Bool = false) {
     let boxedSelf = BondBox(self)
     boundObservable?.bonds.remove(boxedSelf)
 
@@ -91,7 +91,7 @@ public class Bond<T> {
     if let boundDynamic = boundDynamic, let otherBoundDynamic = boundDynamic.valueBond.boundObservable as? Dynamic {
       if otherBoundDynamic.valueBond == self {
         if !twoWayUnbindIntentional {
-          println("WARNING: A two-way binding was unbinded because of a new binding to bond \(self)")
+          print("WARNING: A two-way binding was unbinded because of a new binding to bond \(self)")
         }
         boundDynamic.valueBond.unbind()
       }
