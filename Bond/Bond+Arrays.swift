@@ -340,7 +340,7 @@ private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
   
   override var value: [U] {
     get {
-      fatalError("Getting proxy array value is not supported!")
+      return sourceArray.lazy.enumerate().map { mapf($1, $0) }
     }
     set {
       fatalError("Modifying proxy array is not supported!")
@@ -552,7 +552,7 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
   
   override var value: [T] {
     get {
-      fatalError("Getting proxy array value is not supported!")
+      return sourceArray.lazy.filter(filterf)
     }
     set(newValue) {
       fatalError("Modifying proxy array is not supported!")
