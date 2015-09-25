@@ -343,10 +343,11 @@ public func deliver<T>(observable: Observable<T>, on queue: dispatch_queue_t) ->
 // MARK: Distinct
 
 internal func _distinct<T: Equatable>(observable: Observable<T>) -> Observable<T> {
-  let dyn = InternalDynamic<T>(observable.value)
+  let dyn = InternalDynamic<T>()
+  dyn.backingValue = observable.backingValue
 
   let bond = Bond<T> { [weak dyn] v in
-    if v != dyn?.value {
+    if dyn?.valid == false || v != dyn?.value {
       dyn?.value = v
     }
   }

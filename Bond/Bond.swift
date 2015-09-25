@@ -301,6 +301,12 @@ public extension Observable
   }
 }
 
+public extension Observable where T: Equatable {
+  public func distinct() -> Observable<T> {
+    return _distinct(self)
+  }
+}
+
 // MARK: Equatable/Hashable
 
 extension Bond: Hashable, Equatable {
