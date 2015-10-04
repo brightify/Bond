@@ -124,6 +124,22 @@ internal func _flatMapTwoWay<T, U>(observable: Observable<T>, _ f: T -> Dynamic<
   return outputBridge
 }
 
+
+public func asyncMap<T, U>(observable: Observable<T>, _ f: (T, U -> ()) -> ()) -> Observable<U> {
+  return _asyncMap(observable, f)
+}
+  
+
+public func asyncMap<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, _ f: (T, U -> ()) -> ()) -> Observable<U> {
+  return _asyncMap(dynamical.designatedDynamic, f)
+}
+
+internal func _asyncMap<T, U>(observable: Observable<T>, _ f: (T, U -> ()) -> ()) -> Observable<U> {
+  let proxy = AsyncMapProxyObservable<T, U>(f)
+  observable ->> proxy
+  return proxy
+}
+
 // MARK: Filter
 
 public func filter<T>(observable: Observable<T>, _ f: T -> Bool) -> Observable<T> {

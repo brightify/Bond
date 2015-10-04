@@ -271,6 +271,10 @@ public extension Observable
   public func flatMapTwoWay<U>(f: T -> Dynamic<U>) -> Dynamic<U> {
     return _flatMapTwoWay(self, f)
   }
+    
+  public func asyncMap<U>(f: (T, U -> ()) -> ()) -> Observable<U> {
+    return _asyncMap(self, f)
+  }
   
   public func filter(f: T -> Bool) -> Observable<T> {
     return _filter(self, f)
@@ -325,3 +329,23 @@ public func ==<T>(left: BondBox<T>, right: BondBox<T>) -> Bool {
   return left._hash == right._hash
 }
 
+internal class AsyncMapProxyObservable<IN, OUT>: Observable<OUT>, Bondable {
+  
+    internal let inputBond: Bond<IN> = .init()
+    
+    internal var designatedBond: Bond<IN> {
+        return self.inputBond
+    }
+  
+    internal init(_ action: (IN, (OUT) -> ()) -> ()) {
+        super.init()
+        
+        inputBond.listener = { [unowned self] in
+            action($0, self.setOutputValue)
+        }
+    }
+    
+    private func setOutputValue(value: OUT) {
+        self.value = value
+    }
+}

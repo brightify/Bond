@@ -60,6 +60,14 @@ public func ->> <T, U: Bondable where U.BondType == T>(left: Observable<T>?, rig
   left ->> right?.designatedBond
 }
 
+public func ->> <T, U>(left: Observable<T>, right: (T, U -> ()) -> ()) -> Observable<U> {
+  return left.asyncMap(right)
+}
+
+public func ->> <T: Dynamical, U>(left: T, right: (T.DynamicType, U -> ()) -> ()) -> Observable<U> {
+  return left.designatedDynamic ->> right
+}
+
 // MARK: Bind only
 public func ->| <T>(left: Observable<T>?, right: Bond<T>?) {
   if let right = right {
@@ -87,6 +95,14 @@ public func ->| <T: Dynamical, U: Bondable where T.DynamicType == U.BondType>(le
 
 public func ->| <T, U: Bondable where U.BondType == T>(left: Observable<T>?, right: U?) {
   left ->| right?.designatedBond
+}
+
+public func ->| <T, U>(left: Observable<T>, right: (T, U -> ()) -> ()) -> Observable<U> {
+  return left.asyncMap(right)
+}
+
+public func ->| <T: Dynamical, U>(left: T, right: (T.DynamicType, U -> ()) -> ()) -> Observable<U> {
+  return left.designatedDynamic ->| right
 }
 
 // MARK: Two way bind
