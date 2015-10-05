@@ -249,15 +249,18 @@ class ArrayTests: XCTestCase {
     
     array.append(1)
     XCTAssert(mapped.count == 1)
+    XCTAssert(mapped.observableCount.value == 1)
     XCTAssert(mapped[0] == 2)
     
     array.insert(2, atIndex: 0)
     XCTAssert(mapped.count == 2)
+    XCTAssert(mapped.observableCount.value == 2)
     XCTAssert(mapped[0] == 4)
     XCTAssert(mapped[1] == 2)
     
     array.insertContentsOf([3, 4], atIndex: 1)
     XCTAssert(mapped.count == 4)
+    XCTAssert(mapped.observableCount.value == 4)
     XCTAssert(mapped[0] == 4)
     XCTAssert(mapped[1] == 6)
     XCTAssert(mapped[2] == 8)
@@ -265,12 +268,14 @@ class ArrayTests: XCTestCase {
     
     array.removeLast()
     XCTAssert(mapped.count == 3)
+    XCTAssert(mapped.observableCount.value == 3)
     XCTAssert(mapped[0] == 4)
     XCTAssert(mapped[1] == 6)
     XCTAssert(mapped[2] == 8)
     
     array.removeAtIndex(1)
     XCTAssert(mapped.count == 2)
+    XCTAssert(mapped.observableCount.value == 2)
     XCTAssert(mapped[0] == 4)
     XCTAssert(mapped[1] == 8)
     

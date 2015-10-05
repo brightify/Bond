@@ -118,6 +118,11 @@ public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
     return ObservableArrayGenerator<T>(array: self)
   }
   
+  override func tryDispatch(value: [T]) {
+    observableCount.value = count
+    super.tryDispatch(value)
+  }
+  
   private func dispatchWillReset() {
     for bondBox in bonds {
       if let arrayBond = bondBox.bond as? ArrayBond {
@@ -285,7 +290,8 @@ public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
   public override init(_ array: Array<T>) {
     super.init(array)
     arrayBond.listener = { [unowned self] in
-      self.value = $0
+      self.noEventValue = $0
+      self.tryDispatch($0)
     }
     
     arrayBond.willInsertListener = { [unowned self] array, i in

@@ -86,6 +86,74 @@ class ReduceTests: XCTestCase {
     XCTAssert(fm.value == "yet another", "Value after child of child dynamic change")
   }
   
+  func testArrayFlatMap() {
+    class A {
+      let b = Dynamic<B>(B())
+    }
+    
+    class B {
+      var c = DynamicArray<String>(["hello"])
+    }
+    
+    let d1 = Dynamic<A>(A())
+    let fm = d1.flatMap { $0.b }.flatMap { $0.c }
+    
+    XCTAssertEqual(fm[0], "hello")
+    XCTAssertEqual(fm.valid, true)
+    
+    let a2 = A()
+    a2.b.value.c[0] = "yello"
+    d1.value = a2
+    
+    XCTAssertEqual(fm[0], "yello")
+    
+    let b3 = B()
+    b3.c[0] = "another"
+    d1.value.b.value = b3
+    
+    XCTAssertEqual(fm[0], "another")
+    
+    let c4 = ["yet", "another"]
+    d1.value.b.value.c.value = c4
+    
+    XCTAssertEqual(fm[0], "yet")
+    XCTAssertEqual(fm[1], "another")
+    XCTAssertEqual(fm.observableCount.value, 2)
+  }
+  
+  func testArrayObservableCountFlatMap() {
+    class A {
+      var strings = ObservableArray<String>(["hello"])
+    }
+    
+    var count: Int = 0
+    let bond = Bond<Int> {
+      count = $0
+    }
+    
+    let dyn = Dynamic(A())
+    let fm = dyn.flatMap { $0.strings }
+    fm.observableCount.map { print("count: \($0)"); return $0 } ->> bond
+    XCTAssertEqual(dyn.value.strings.observableCount.value, 1)
+    XCTAssertEqual(dyn.value.strings.count, 1)
+    XCTAssertEqual(count, 1)
+    
+    dyn.value.strings.value = ["hello", "world"]
+    XCTAssertEqual(dyn.value.strings.observableCount.value, 2)
+    XCTAssertEqual(dyn.value.strings.count, 2)
+    XCTAssertEqual(count, 2)
+
+    let newA = A()
+    newA.strings = ObservableArray(["hello", "world", "!"])
+    dyn.value = newA
+    XCTAssertEqual(dyn.value.strings.observableCount.value, 3)
+    XCTAssertEqual(dyn.value.strings.count, 3)
+    XCTAssertEqual(count, 3)
+    
+    
+    //model.flatMap { $0.tickets }.observableCount.map { print("ticketcount: \($0)"); return $0 == 0 } ->> ticketsList.dynHidden
+  }
+  
   func testDynamicFlatMapTwoWayBinding() {
     class A {
       let b = Dynamic<B>(B())
