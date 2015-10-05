@@ -64,7 +64,7 @@ class ArrayTests: XCTestCase {
     XCTAssert(array.value == [3, 2, 4])
     XCTAssert(element == 1)
     
-    array.splice([8, 9], atIndex: 1)
+    array.insertContentsOf([8, 9], atIndex: 1)
     XCTAssert(array.count == 5)
     XCTAssert(array.value == [3, 8, 9, 2, 4])
     
@@ -122,7 +122,7 @@ class ArrayTests: XCTestCase {
     XCTAssert(indices == [1])
     XCTAssert(objects == [1])
     
-    array.splice([8, 9], atIndex: 1)
+    array.insertContentsOf([8, 9], atIndex: 1)
     XCTAssert(indices == [1, 2])
     
     array[0] = 0
@@ -208,7 +208,7 @@ class ArrayTests: XCTestCase {
     XCTAssert(filtered == [6])
     resetState()
     
-    array.splice([8, 9, 3], atIndex: 1)   // [3, 8, 9, 3, 1, 6, 4]
+    array.insertContentsOf([8, 9, 3], atIndex: 1)   // [3, 8, 9, 3, 1, 6, 4]
     XCTAssert(array.value == [3, 8, 9, 3, 1, 6, 4])
     XCTAssert(indices == [0, 1])
     XCTAssert(filtered == [8, 9, 6])
@@ -242,7 +242,7 @@ class ArrayTests: XCTestCase {
   
   func testArrayMap() {
     let array = DynamicArray<Int>([])
-    let mapped = array.map { e, i in e * 2 }
+    let mapped = array.map { i, e in e * 2 }
     
     XCTAssert(array.count == 0)
     XCTAssert(mapped.count == 0)
@@ -256,7 +256,7 @@ class ArrayTests: XCTestCase {
     XCTAssert(mapped[0] == 4)
     XCTAssert(mapped[1] == 2)
     
-    array.splice([3, 4], atIndex: 1)
+    array.insertContentsOf([3, 4], atIndex: 1)
     XCTAssert(mapped.count == 4)
     XCTAssert(mapped[0] == 4)
     XCTAssert(mapped[1] == 6)
@@ -286,85 +286,93 @@ class ArrayTests: XCTestCase {
     
     var callCount: Int = 0
     let array = DynamicArray<Int>([])
-    let mapped = array.map { e, i -> Test in
+    let mapped = array.lazyMap { i, e -> Test in
       callCount++
       return Test(e)
     }
     
-    XCTAssert(mapped.count == 0)
-    XCTAssert(callCount == 0)
+    XCTAssertEqual(mapped.count, 0)
+    XCTAssertEqual(callCount, 0)
     
     array.append(1)
-    XCTAssert(callCount == 0)
+    XCTAssertEqual(callCount, 0)
+    XCTAssertEqual(mapped.count, 1)
     
-    XCTAssert(mapped[0].value == 1)
-    XCTAssert(callCount == 1, "Should call")
+    XCTAssertEqual(mapped[0]().value, 1)
+    XCTAssertEqual(callCount, 1, "Should call")
     
-    XCTAssert(mapped[0].value == 1)
-    XCTAssert(callCount == 2, "Should call")
+    XCTAssertEqual(mapped[0]().value, 1)
+    XCTAssertEqual(callCount, 2, "Should call")
     
     array.insert(2, atIndex: 0)
-    XCTAssert(callCount == 2)
+    XCTAssertEqual(mapped.count, 2)
+    XCTAssertEqual(callCount, 2)
     
-    XCTAssert(mapped[1].value == 1)
-    XCTAssert(callCount == 3, "Should call")
+    XCTAssertEqual(mapped[1]().value, 1)
+    XCTAssertEqual(callCount, 3, "Should call")
     
-    XCTAssert(mapped[0].value == 2)
-    XCTAssert(callCount == 4, "Should call")
+    XCTAssertEqual(mapped[0]().value, 2)
+    XCTAssertEqual(callCount, 4, "Should call")
     
-    XCTAssert(mapped[0].value == 2)
-    XCTAssert(callCount == 5, "Should call")
+    XCTAssertEqual(mapped[0]().value, 2)
+    XCTAssertEqual(callCount, 5, "Should call")
     
     array.removeAtIndex(0)
-    XCTAssert(callCount == 5)
+    XCTAssertEqual(mapped.count, 1)
+    XCTAssertEqual(callCount, 5)
     
-    XCTAssert(mapped[0].value == 1)
-    XCTAssert(callCount == 6, "Should call")
+    XCTAssertEqual(mapped[0]().value, 1)
+    XCTAssertEqual(callCount, 6, "Should call")
     
     array.removeLast()
-    XCTAssert(callCount == 6)
+    XCTAssertEqual(mapped.count, 0)
+    XCTAssertEqual(callCount, 6)
     
-    array.splice([1, 2, 3, 4], atIndex: 0)
-    XCTAssert(callCount == 6)
+    array.insertContentsOf([1, 2, 3, 4], atIndex: 0)
+    XCTAssertEqual(mapped.count, 4)
+    XCTAssertEqual(callCount, 6)
     
-    XCTAssert(mapped[1].value == 2)
-    XCTAssert(callCount == 7, "Should call")
+    XCTAssertEqual(mapped[1]().value, 2)
+    XCTAssertEqual(callCount, 7, "Should call")
     
     array.removeAtIndex(1)
-    XCTAssert(callCount == 7)
+    XCTAssertEqual(mapped.count, 3)
+    XCTAssertEqual(callCount, 7)
     
-    XCTAssert(mapped[1].value == 3)
-    XCTAssert(callCount == 8, "Should call")
+    XCTAssertEqual(mapped[1]().value, 3)
+    XCTAssertEqual(callCount, 8, "Should call")
     
     array.insert(2, atIndex: 1)
-    XCTAssert(callCount == 8)
+    XCTAssertEqual(mapped.count, 4)
+    XCTAssertEqual(callCount, 8)
     
-    XCTAssert(mapped[2].value == 3)
-    XCTAssert(callCount == 9, "Should call")
+    XCTAssertEqual(mapped[2]().value, 3)
+    XCTAssertEqual(callCount, 9, "Should call")
     
-    XCTAssert(mapped[1].value == 2)
-    XCTAssert(callCount == 10, "Should call")
+    XCTAssertEqual(mapped[1]().value, 2)
+    XCTAssertEqual(callCount, 10, "Should call")
     
-    XCTAssert(mapped.last!.value == 4)
-    XCTAssert(callCount == 11, "Should call")
+    XCTAssertEqual(mapped.last!().value, 4)
+    XCTAssertEqual(callCount, 11, "Should call")
     
-    XCTAssert(mapped.last!.value == 4)
-    XCTAssert(callCount == 12, "Should call")
+    XCTAssertEqual(mapped.last!().value, 4)
+    XCTAssertEqual(callCount, 12, "Should call")
     
-    XCTAssert(mapped.first!.value == 1)
-    XCTAssert(callCount == 13, "Should call")
+    XCTAssertEqual(mapped.first!().value, 1)
+    XCTAssertEqual(callCount, 13, "Should call")
     
-    XCTAssert(mapped.first!.value == 1)
-    XCTAssert(callCount == 14, "Should call")
+    XCTAssertEqual(mapped.first!().value, 1)
+    XCTAssertEqual(callCount, 14, "Should call")
     
     array.removeAll(true)
-    XCTAssert(callCount == 14)
+    XCTAssertEqual(mapped.count, 0)
+    XCTAssertEqual(callCount, 14)
   }
   
   func testFilterMapChain() {
     let array = DynamicArray<Int>([])
     let filtered = array.filter { e in e > 2 }
-    let mapped = filtered.map { e, i in e * 2 }
+    let mapped = filtered.map { i, e in e * 2 }
     
     XCTAssert(array.count == 0)
     XCTAssert(mapped.count == 0)
@@ -375,7 +383,7 @@ class ArrayTests: XCTestCase {
     array.insert(3, atIndex: 0)
     XCTAssert(mapped == [6])
     
-    array.splice([1, 4], atIndex: 1)
+    array.insertContentsOf([1, 4], atIndex: 1)
     XCTAssert(mapped == [6, 8])
     
     array.removeLast()

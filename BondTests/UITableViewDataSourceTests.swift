@@ -120,7 +120,7 @@ class UITableViewDataSourceTests: XCTestCase {
     tableView.registerClass(UITableViewCell.self, forCellReuseIdentifier: "cellID")
     expectedOperations = []
     bond = UITableViewDataSourceBond(tableView: tableView, disableAnimation: true)
-    array.map { rows, section in
+    array.map { section, rows in
       rows.map { int, row -> UITableViewCell in
         return tableView.dequeueReusableCellWithIdentifier("cellID")!
       }

@@ -207,7 +207,7 @@ public class MutableObservableArray<T>: ObservableArray<T> {
   }
   
   public func append(array: Array<T>) {
-    splice(array, atIndex: noEventValue.count)
+    insertContentsOf(array, atIndex: noEventValue.count)
   }
   
   public func removeLast() -> T {
@@ -227,7 +227,7 @@ public class MutableObservableArray<T>: ObservableArray<T> {
     dispatchDidInsert([i])
   }
   
-  public func splice(array: Array<T>, atIndex i: Int) {
+  public func insertContentsOf(array: Array<T>, atIndex i: Int) {
     if array.count > 0 {
       let indices = Array(i..<i+array.count)
       dispatchWillInsert(indices)
@@ -271,9 +271,6 @@ public class MutableObservableArray<T>: ObservableArray<T> {
 
 // MARK: Dynamic array
 
-/**
-Note: Directly setting `DynamicArray.value` is not recommended. The array's count will not be updated and no array change notification will be emitted. Call `setArray:` instead.
-*/
 public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
   public let arrayBond: ArrayBond<T> = ArrayBond()
   
@@ -287,46 +284,99 @@ public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
   
   public override init(_ array: Array<T>) {
     super.init(array)
-    arrayBond.listener = { [unowned self] in self.value = $0 }
+    arrayBond.listener = { [unowned self] in
+      self.value = $0
+    }
+    
+    arrayBond.willInsertListener = { [unowned self] array, i in
+      self.dispatchWillInsert(i)
+    }
+    
+    arrayBond.didInsertListener = { [unowned self] array, i in
+      self.dispatchDidInsert(i)
+    }
+    
+    arrayBond.willRemoveListener = { [unowned self] array, i in
+      self.dispatchWillRemove(i)
+    }
+    
+    arrayBond.didRemoveListener = { [unowned self] array, i in
+      self.dispatchDidRemove(i)
+    }
+    
+    arrayBond.willUpdateListener = { [unowned self] array, i in
+      self.dispatchWillUpdate(i)
+    }
+    
+    arrayBond.didUpdateListener = { [unowned self] array, i in
+      self.dispatchDidUpdate(i)
+    }
+    
+    arrayBond.willResetListener = { [unowned self] array in
+      self.dispatchWillReset()
+    }
+    
+    arrayBond.didResetListener = { [unowned self] array in
+      self.dispatchDidReset()
+    }
   }
+}
+
+public class LazyObservableArray<U>: ObservableArray<() -> U> {
+
+  override init(_ value: [() -> U]) {
+    super.init(value)
+  }
+  
+  public func eager() -> ObservableArray<U> {
+    return map { $0() }
+  }
+  
 }
 
 // MARK: Dynamic Array Map Proxy
 
-private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
-  private unowned var sourceArray: ObservableArray<T>
-  private var mapf: (T, Int) -> U
+private class LazyObservableArrayMapProxy<T, U>: LazyObservableArray<U> {
   private let bond: ArrayBond<T>
   
-  private init(sourceArray: ObservableArray<T>, mapf: (T, Int) -> U) {
-    self.sourceArray = sourceArray
-    self.mapf = mapf
-    self.bond = ArrayBond<T>()
-    self.bond.bind(sourceArray, fire: false)
-    super.init([])
+  private init(sourceArray: ObservableArray<T>, mapf: (Int, T) -> U) {
+    bond = ArrayBond<T>()
+    bond.bind(sourceArray, fire: false)
     
-    bond.willInsertListener = { [unowned self] array, i in
-      self.dispatchWillInsert(i)
+    let lazyArray = LazyObservableArrayMapProxy.createArray(sourceArray, mapf)
+
+    super.init(lazyArray)
+    
+    bond.listener = { [unowned self] array in
+      self.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
+      self.tryDispatch(self.noEventValue)
     }
     
-    bond.didInsertListener = { [unowned self] array, i in
-      self.dispatchDidInsert(i)
+    bond.willInsertListener = { [unowned self] array, indices in
+      self.dispatchWillInsert(indices)
     }
     
-    bond.willRemoveListener = { [unowned self] array, i in
-      self.dispatchWillRemove(i)
+    bond.didInsertListener = { [unowned self] array, indices in
+      self.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
+      self.dispatchDidInsert(indices)
     }
     
-    bond.didRemoveListener = { [unowned self] array, i in
-      self.dispatchDidRemove(i)
+    bond.willRemoveListener = { [unowned self] array, indices in
+      self.dispatchWillRemove(indices)
     }
     
-    bond.willUpdateListener = { [unowned self] array, i in
-      self.dispatchWillUpdate(i)
+    bond.didRemoveListener = { [unowned self] array, indices in
+      self.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
+      self.dispatchDidRemove(indices)
     }
     
-    bond.didUpdateListener = { [unowned self] array, i in
-      self.dispatchDidUpdate(i)
+    bond.willUpdateListener = { [unowned self] array, indices in
+      self.dispatchWillUpdate(indices)
+    }
+    
+    bond.didUpdateListener = { [unowned self] array, indices in
+      self.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
+      self.dispatchDidUpdate(indices)
     }
     
     bond.willResetListener = { [unowned self] array in
@@ -334,50 +384,93 @@ private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
     }
     
     bond.didResetListener = { [unowned self] array in
+      self.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
+      self.dispatchDidReset()
+    }
+  }
+  
+  private static func createArray(sourceArray: [T], _ mapf: (Int, T) -> U) -> [() -> U] {
+    guard sourceArray.count > 0 else { return [] }
+    return (0..<sourceArray.count).map { i in return { mapf(i, sourceArray[i]) } }
+  }
+  
+  private static func createArray(sourceArray: ObservableArray<T>, _ mapf: (Int, T) -> U) -> [() -> U] {
+    guard sourceArray.count > 0 else { return [] }
+    return (0..<sourceArray.count).map(createItem(sourceArray, mapf)).map(takeFirst)
+  }
+  
+  private static func createItem(sourceArray: ObservableArray<T>, _ mapf: (Int, T) -> U)(_ index: Int) -> (element: () -> U, index: Int) {
+    return (element: { [unowned sourceArray] in
+        mapf(index, sourceArray[index])
+    }, index: index)
+  }
+  
+  
+}
+
+private func takeFirst<A, B>(a: A, _ b: B) -> A {
+  return a
+}
+
+private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
+  private let bond: ArrayBond<T>
+  
+  private init(sourceArray: ObservableArray<T>, mapf: (Int, T) -> U) {
+    self.bond = ArrayBond<T>()
+    self.bond.bind(sourceArray, fire: false)
+
+    let array = sourceArray.value.enumerate().map(mapf)
+    super.init(array)
+    
+    bond.willInsertListener = { [unowned self] array, indices in
+      self.dispatchWillInsert(indices)
+    }
+    
+    bond.didInsertListener = { [unowned self] array, indices in
+      indices.forEach {
+        self.noEventValue.insert(mapf($0, array[$0]), atIndex: $0)
+      }
+      self.dispatchDidInsert(indices)
+    }
+    
+    bond.willRemoveListener = { [unowned self] array, indices in
+      self.dispatchWillRemove(indices)
+    }
+    
+    bond.didRemoveListener = { [unowned self] array, indices in
+      indices.sort(>).forEach {
+        self.noEventValue.removeAtIndex($0)
+      }
+      self.dispatchDidRemove(indices)
+    }
+    
+    bond.willUpdateListener = { [unowned self] array, indices in
+      self.dispatchWillUpdate(indices)
+    }
+    
+    bond.didUpdateListener = { [unowned self] array, indices in
+      indices.forEach {
+        self.noEventValue[$0] = mapf($0, array[$0])
+      }
+      self.dispatchDidUpdate(indices)
+    }
+    
+    bond.willResetListener = { [unowned self] array in
+      self.dispatchWillReset()
+    }
+    
+    bond.didResetListener = { [unowned self] array in
+      self.noEventValue = array.enumerate().map(mapf)
       self.dispatchDidReset()
     }
   }
   
   override var value: [U] {
     get {
-      return sourceArray.lazy.enumerate().map { mapf($1, $0) }
+      return super.value
     }
     set {
       fatalError("Modifying proxy array is not supported!")
-    }
-  }
-  
-  override var count: Int {
-    return sourceArray.count
-  }
-  
-  override var capacity: Int {
-    return sourceArray.capacity
-  }
-  
-  override var isEmpty: Bool {
-    return sourceArray.isEmpty
-  }
-  
-  override var first: U? {
-    if let first = sourceArray.first {
-      return mapf(first, 0)
-    } else {
-      return nil
-    }
-  }
-  
-  override var last: U? {
-    if let last = sourceArray.last {
-      return mapf(last, sourceArray.count - 1)
-    } else {
-      return nil
-    }
-  }
-  
-  override subscript(index: Int) -> U {
-    get {
-        return mapf(sourceArray[index], index)
     }
   }
 }
@@ -704,13 +797,22 @@ private class ObservableArrayDeliverOnProxy<T>: ObservableArray<T> {
 // MARK: Dynamic Array additions
 public extension ObservableArray
 {
-  public func map<U>(f: (T, Int) -> U) -> ObservableArray<U> {
+  public func map<U>(f: (Int, T) -> U) -> ObservableArray<U> {
     return _map(self, f)
   }
   
   public func map<U>(f: T -> U) -> ObservableArray<U> {
-    let mapf = { (o: T, i: Int) -> U in f(o) }
+    let mapf = { (i: Int, o: T) -> U in f(o) }
     return _map(self, mapf)
+  }
+  
+  public func lazyMap<U>(f: (Int, T) -> U) -> LazyObservableArray<U> {
+    return _lazyMap(self, f)
+  }
+  
+  public func lazyMap<U>(f: T -> U) -> LazyObservableArray<U> {
+    let mapf = { (i: Int, o: T) -> U in f(o) }
+    return _lazyMap(self, mapf)
   }
   
   public func filter(f: T -> Bool) -> ObservableArray<T> {
@@ -720,8 +822,12 @@ public extension ObservableArray
 
 // MARK: Map
 
-private func _map<T, U>(dynamicArray: ObservableArray<T>, _ f: (T, Int) -> U) -> ObservableArrayMapProxy<T, U> {
+private func _map<T, U>(dynamicArray: ObservableArray<T>, _ f: (Int, T) -> U) -> ObservableArrayMapProxy<T, U> {
   return ObservableArrayMapProxy(sourceArray: dynamicArray, mapf: f)
+}
+
+private func _lazyMap<T, U>(dynamicArray: ObservableArray<T>, _ f: (Int, T) -> U) -> LazyObservableArrayMapProxy<T, U> {
+  return LazyObservableArrayMapProxy(sourceArray: dynamicArray, mapf: f)
 }
 
 // MARK: Filter

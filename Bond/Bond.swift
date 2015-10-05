@@ -124,9 +124,7 @@ public class Observable<T> {
     set {
       objc_sync_enter(self)
       noEventValue = newValue
-      if !self.dispatchInProgress {
-        dispatch(newValue)
-      }
+      tryDispatch(newValue)
       objc_sync_exit(self)
     }
   }
@@ -149,6 +147,12 @@ public class Observable<T> {
     backingValue = value
   }
   
+  internal func tryDispatch(value: T) {
+    if !dispatchInProgress {
+        dispatch(value)
+    }
+  }
+    
   private func dispatch(value: T) {
     // lock
     self.dispatchInProgress = true
