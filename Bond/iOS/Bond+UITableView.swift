@@ -38,10 +38,10 @@ extension NSIndexSet {
 }
 
 @objc class TableViewDynamicArrayDataSource: NSObject, UITableViewDataSource {
-  weak var observable: ObservableArray<ObservableArray<UITableViewCell>>?
+  weak var observable: ObservableArray<LazyObservableArray<UITableViewCell>>?
   @objc weak var nextDataSource: UITableViewDataSource?
   
-  init(observable: ObservableArray<ObservableArray<UITableViewCell>>) {
+  init(observable: ObservableArray<LazyObservableArray<UITableViewCell>>) {
     self.observable = observable
     super.init()
   }
@@ -55,7 +55,7 @@ extension NSIndexSet {
   }
   
   func tableView(tableView: UITableView, cellForRowAtIndexPath indexPath: NSIndexPath) -> UITableViewCell {
-    return observable?[indexPath.section][indexPath.item] ?? UITableViewCell()
+    return observable?[indexPath.section][indexPath.item]() ?? UITableViewCell()
   }
   
   // Forwards
@@ -117,7 +117,7 @@ extension NSIndexSet {
   }
 }
 
-private class UITableViewDataSourceSectionBond<T>: ArrayBond<UITableViewCell> {
+private class UITableViewDataSourceSectionBond: ArrayBond<() -> UITableViewCell> {
   weak var tableView: UITableView?
   var section: Int
   init(tableView: UITableView?, section: Int, disableAnimation: Bool = false) {
@@ -167,10 +167,10 @@ private class UITableViewDataSourceSectionBond<T>: ArrayBond<UITableViewCell> {
   }
 }
 
-public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableViewCell>> {
+public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableViewCell>> {
   weak var tableView: UITableView?
   private var dataSource: TableViewDynamicArrayDataSource?
-  private var sectionBonds: [UITableViewDataSourceSectionBond<Void>] = []
+  private var sectionBonds: [UITableViewDataSourceSectionBond] = []
   public let disableAnimation: Bool
   public weak var nextDataSource: UITableViewDataSource? {
     willSet(newValue) {
@@ -191,7 +191,7 @@ public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableView
             tableView.insertSections(NSIndexSet(array: i), withRowAnimation: UITableViewRowAnimation.Automatic)
             
             for section in i.sort(<) {
-              let sectionBond = UITableViewDataSourceSectionBond<Void>(tableView: tableView, section: section, disableAnimation: disableAnimation)
+              let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation)
               let sectionObservable = array[section]
               sectionObservable.bindTo(sectionBond)
               s.sectionBonds.insert(sectionBond, atIndex: section)
@@ -236,7 +236,7 @@ public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableView
             tableView.reloadSections(NSIndexSet(array: i), withRowAnimation: UITableViewRowAnimation.Automatic)
 
             for section in i {
-              let sectionBond = UITableViewDataSourceSectionBond<Void>(tableView: tableView, section: section, disableAnimation: disableAnimation)
+              let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation)
               let sectionObservable = array[section]
               sectionObservable.bindTo(sectionBond)
               
@@ -257,16 +257,15 @@ public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableView
     }
   }
   
-  public func bind(observable: ObservableArray<UITableViewCell>) {
+  public func bind(observable: LazyObservableArray<UITableViewCell>) {
     bind(ObservableArray([observable]))
   }
   
-  public override func bind(observable: Observable<Array<ObservableArray<UITableViewCell>>>, fire: Bool, strongly: Bool) {
+  public override func bind(observable: Observable<Array<LazyObservableArray<UITableViewCell>>>, fire: Bool, strongly: Bool) {
     super.bind(observable, fire: false, strongly: strongly)
-    if let observable = observable as? ObservableArray<ObservableArray<UITableViewCell>> {
-      
+    if let observable = observable as? ObservableArray<LazyObservableArray<UITableViewCell>> {
       for section in 0..<observable.count {
-        let sectionBond = UITableViewDataSourceSectionBond<Void>(tableView: self.tableView, section: section, disableAnimation: disableAnimation)
+        let sectionBond = UITableViewDataSourceSectionBond(tableView: self.tableView, section: section, disableAnimation: disableAnimation)
         let sectionObservable = observable[section]
         sectionObservable.bindTo(sectionBond)
         sectionBonds.append(sectionBond)
@@ -289,11 +288,11 @@ public class UITableViewDataSourceBond<T>: ArrayBond<ObservableArray<UITableView
 private var bondDynamicHandleUITableView: UInt8 = 0
 
 extension UITableView /*: Bondable */ {
-  public var designatedBond: UITableViewDataSourceBond<UITableViewCell> {
+  public var designatedBond: UITableViewDataSourceBond {
     if let d: AnyObject = objc_getAssociatedObject(self, &bondDynamicHandleUITableView) {
-      return (d as? UITableViewDataSourceBond<UITableViewCell>)!
+      return (d as? UITableViewDataSourceBond)!
     } else {
-      let bond = UITableViewDataSourceBond<UITableViewCell>(tableView: self, disableAnimation: false)
+      let bond = UITableViewDataSourceBond(tableView: self, disableAnimation: false)
       objc_setAssociatedObject(self, &bondDynamicHandleUITableView, bond, .OBJC_ASSOCIATION_RETAIN_NONATOMIC)
       return bond
     }
@@ -308,18 +307,18 @@ private func perform(animated animated: Bool, block: () -> Void) {
   }
 }
 
-public func ->> <T>(left: DynamicArray<UITableViewCell>, right: UITableViewDataSourceBond<T>) {
+//public func ->> <T>(left: DynamicArray<UITableViewCell>, right: UITableViewDataSourceBond) {
+//  right.bind(left)
+//}
+
+public func ->> (left: LazyObservableArray<UITableViewCell>, right: UITableViewDataSourceBond) {
   right.bind(left)
 }
 
-public func ->> <T>(left: ObservableArray<UITableViewCell>, right: UITableViewDataSourceBond<T>) {
-  right.bind(left)
-}
-
-public func ->> (left: ObservableArray<UITableViewCell>, right: UITableView) {
+public func ->> (left: LazyObservableArray<UITableViewCell>, right: UITableView) {
   left ->> right.designatedBond
 }
 
-public func ->> (left: ObservableArray<ObservableArray<UITableViewCell>>, right: UITableView) {
+public func ->> (left: ObservableArray<LazyObservableArray<UITableViewCell>>, right: UITableView) {
   left ->> right.designatedBond
 }

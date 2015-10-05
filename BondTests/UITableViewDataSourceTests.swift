@@ -111,7 +111,7 @@ class TestNextDataSource:NSObject, UITableViewDataSource {
 class UITableViewDataSourceTests: XCTestCase {
   var tableView: TestTableView!
   var array: DynamicArray<DynamicArray<Int>>!
-  var bond: UITableViewDataSourceBond<Void>!
+  var bond: UITableViewDataSourceBond!
   var expectedOperations: [TableOperation]!
   override func setUp() {
     array = DynamicArray([DynamicArray([1, 2]), DynamicArray([3, 4])])
@@ -121,7 +121,7 @@ class UITableViewDataSourceTests: XCTestCase {
     expectedOperations = []
     bond = UITableViewDataSourceBond(tableView: tableView, disableAnimation: true)
     array.map { section, rows in
-      rows.map { int, row -> UITableViewCell in
+      rows.lazyMap { int, row -> UITableViewCell in
         return tableView.dequeueReusableCellWithIdentifier("cellID")!
       }
     } ->> bond
