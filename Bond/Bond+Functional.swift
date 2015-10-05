@@ -80,6 +80,30 @@ internal func _flatMap<T, U>(observable: Observable<T>, _ f: T -> Observable<U>)
   return dyn
 }
 
+public func flatMap<T, U>(observable: Observable<T>, _ f: T -> ObservableArray<U>) -> ObservableArray<U> {
+  return _flatMap(observable, f)
+}
+
+public func flatMap<S: Dynamical, T, U where S.DynamicType == T>(dynamical: S, _ f: T -> ObservableArray<U>) -> ObservableArray<U> {
+  return _flatMap(dynamical.designatedDynamic, f)
+}
+
+internal func _flatMap<T, U>(observable: Observable<T>, _ f: T -> ObservableArray<U>) -> ObservableArray<U> {
+  let dyn = InternalDynamicArray<U>()
+  
+  if let value = observable.backingValue {
+    f(value) ->> dyn
+  }
+  
+  let bond = Bond<T> { [unowned dyn] t in
+    f(t) ->> dyn
+  }
+  dyn.retain(bond)
+  observable.bindTo(bond)
+  
+  return dyn
+}
+
 public func flatMapTwoWay<T, U>(observable: Observable<T>, _ f: T -> Dynamic<U>) -> Dynamic<U> {
   return _flatMapTwoWay(observable, f)
 }

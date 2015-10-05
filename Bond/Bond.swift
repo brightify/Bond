@@ -238,6 +238,37 @@ public class InternalDynamic<T>: Dynamic<T> {
   }
 }
 
+public class InternalDynamicArray<T>: DynamicArray<T> {
+    
+    public init() {
+        super.init([])
+    }
+    
+    public override init(_ value: [T]) {
+        super.init(value)
+    }
+    
+    public init(listener: [T] -> ()) {
+        super.init([])
+        let bond = Bond(listener)
+        bond.bind(self, fire: false, strongly: false)
+        retain(bond)
+    }
+    
+    public init(_ value: [T], fire: Bool = false, listener: [T] -> ()) {
+        super.init(value)
+        let bond = Bond(listener)
+        bond.bind(self, fire: fire, strongly: false)
+        retain(bond)
+    }
+    
+    public var updatingFromSelf: Bool = false
+    public var retainedObjects: [AnyObject] = []
+    public func retain(object: AnyObject) {
+        retainedObjects.append(object)
+    }
+}
+
 // MARK: Protocols
 public protocol ObservableType {
   typealias ObservableType
@@ -269,6 +300,10 @@ public extension Observable
   }
   
   public func flatMap<U>(f: T -> Observable<U>) -> Observable<U> {
+    return _flatMap(self, f)
+  }
+    
+  public func flatMap<U>(f: T -> ObservableArray<U>) -> ObservableArray<U> {
     return _flatMap(self, f)
   }
   
