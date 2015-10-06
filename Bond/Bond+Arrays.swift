@@ -74,7 +74,7 @@ public struct ObservableArrayGenerator<T>: GeneratorType {
 // MARK: Observable array
 
 public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
-    public let observableCount: Observable<Int> = Observable(0)
+    public private(set) lazy var observableCount: Observable<Int> = self.map { $0.count }
     
     public override var value: Array<T> {
         willSet {
@@ -111,7 +111,6 @@ public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
     
     public override init(_ value: Array<T>) {
         super.init(value)
-        observableCount.value = count
     }
     
     public subscript(index: Int) -> T {
@@ -122,11 +121,6 @@ public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
     
     public func generate() -> ObservableArrayGenerator<T> {
         return ObservableArrayGenerator<T>(array: self)
-    }
-    
-    override func dispatch(value: [T]) {
-        observableCount.value = value.count
-        super.dispatch(value)
     }
     
     private func dispatchWillReset(array: [T]) {
