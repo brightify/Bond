@@ -402,7 +402,7 @@ internal class AsyncMapProxyObservableArray<IN, OUT>: ObservableArray<OUT>, Bond
     }
     
     internal init(_ action: (IN, [OUT] -> ()) -> ()) {
-        super.init(invalid: true)
+        super.init([])
         
         inputBond.listener = { [unowned self] in
             action($0, self.setOutputValue)

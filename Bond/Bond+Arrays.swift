@@ -113,14 +113,6 @@ public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
         return noEventValue.last
     }
     
-    internal init(invalid: Bool) {
-        if invalid {
-            super.init()
-        } else {
-            super.init([])
-        }
-    }
-    
     public convenience override init() {
         self.init([])
     }
