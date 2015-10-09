@@ -193,7 +193,7 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
                 for section in range {
                     let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation)
                     let sectionObservable = array[section]
-                    sectionObservable.bindTo(sectionBond)
+                    sectionObservable.bindTo(sectionBond, fire: false)
                     s.sectionBonds.insert(sectionBond, atIndex: section)
                     
                     for var idx = section + 1; idx < s.sectionBonds.count; idx++ {
@@ -234,7 +234,7 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
                 for section in range {
                     let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation)
                     let sectionObservable = array[section]
-                    sectionObservable.bindTo(sectionBond)
+                    sectionObservable.bindTo(sectionBond, fire: false)
                     
                     s.sectionBonds[section].unbind()
                     s.sectionBonds[section] = sectionBond
@@ -251,17 +251,17 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
         }
     }
     
-    public func bind(observable: LazyObservableArray<UITableViewCell>) {
-        bind(ObservableArray([observable]))
+    public func bind(observable: LazyObservableArray<UITableViewCell>, fire: Bool = true) {
+        bind(ObservableArray([observable]), fire: fire)
     }
     
     public override func bind(observable: Observable<Array<LazyObservableArray<UITableViewCell>>>, fire: Bool, strongly: Bool) {
-        super.bind(observable, fire: false, strongly: strongly)
+        super.bind(observable, fire: fire, strongly: strongly)
         if let observable = observable as? ObservableArray<LazyObservableArray<UITableViewCell>> {
             for section in 0..<observable.count {
                 let sectionBond = UITableViewDataSourceSectionBond(tableView: self.tableView, section: section, disableAnimation: disableAnimation)
                 let sectionObservable = observable[section]
-                sectionObservable.bindTo(sectionBond)
+                sectionObservable.bindTo(sectionBond, fire: fire)
                 sectionBonds.append(sectionBond)
             }
             
@@ -309,10 +309,22 @@ public func ->> (left: LazyObservableArray<UITableViewCell>, right: UITableViewD
     right.bind(left)
 }
 
+public func ->| (left: LazyObservableArray<UITableViewCell>, right: UITableViewDataSourceBond) {
+    right.bind(left, fire: false)
+}
+
 public func ->> (left: LazyObservableArray<UITableViewCell>, right: UITableView) {
     left ->> right.designatedBond
 }
 
+public func ->| (left: LazyObservableArray<UITableViewCell>, right: UITableView) {
+    left ->| right.designatedBond
+}
+
 public func ->> (left: ObservableArray<LazyObservableArray<UITableViewCell>>, right: UITableView) {
     left ->> right.designatedBond
+}
+
+public func ->| (left: ObservableArray<LazyObservableArray<UITableViewCell>>, right: UITableView) {
+    left ->| right.designatedBond
 }

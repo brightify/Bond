@@ -124,7 +124,7 @@ class UITableViewDataSourceTests: XCTestCase {
       rows.lazyMap { int, row -> UITableViewCell in
         return tableView.dequeueReusableCellWithIdentifier("cellID")!
       }
-    } ->> bond
+    } ->| bond
     expectedOperations.append(.ReloadData) // `tableView` will get a `reloadData` when the bond is attached
   }
   

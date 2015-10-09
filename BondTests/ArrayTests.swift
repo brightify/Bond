@@ -450,7 +450,7 @@ class ArrayTests: XCTestCase {
       testCount++
       XCTAssertEqual(array, expectedAfter, "after arrays don't match (\(array) vs \(expectedAfter))")
     }
-    array ->> bond
+    array ->| bond
     
     array.value = expectedAfter
     
@@ -472,7 +472,7 @@ class ArrayTests: XCTestCase {
       testCount++
       XCTAssert(array == expectedAfter, "after arrays don't match (\(array) vs \(expectedAfter))")
     }
-    array ->> bond
+    array ->| bond
     
     source.value = sourceAfter
     

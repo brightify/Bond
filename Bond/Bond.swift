@@ -76,7 +76,7 @@ public class Bond<T> {
         }
         
         if fire && observable.valid {
-            listener?(observable.value)
+            fireListenerInternally(observable)
         }
     }
     
@@ -97,6 +97,9 @@ public class Bond<T> {
                 boundDynamic.valueBond.unbind()
             }
         }
+    }
+    internal func fireListenerInternally(observable: Observable<T>) {
+        listener?(observable.value)
     }
 }
 

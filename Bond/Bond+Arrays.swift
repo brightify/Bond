@@ -53,6 +53,12 @@ public class ArrayBond<T>: Bond<Array<T>> {
     public override init() {
         super.init()
     }
+    
+    override func fireListenerInternally(observable: Observable<[T]>) {
+        willResetListener?(observable.value)
+        super.fireListenerInternally(observable)
+        didResetListener?(observable.value)
+    }
 }
 
 public struct ObservableArrayGenerator<T>: GeneratorType {
@@ -74,7 +80,9 @@ public struct ObservableArrayGenerator<T>: GeneratorType {
 // MARK: Observable array
 
 public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
-    public private(set) lazy var observableCount: Observable<Int> = self.map { $0.count }
+    public var observableCount: Observable<Int> {
+        return map { $0.count }
+    }
     
     public override var value: Array<T> {
         willSet {
@@ -299,7 +307,7 @@ public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
 
 public class LazyObservableArray<T>: ObservableArray<() -> T> {
     
-    override init(_ value: [() -> T]) {
+    public override init(_ value: [() -> T]) {
         super.init(value)
     }
     

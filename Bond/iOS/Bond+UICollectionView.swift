@@ -102,7 +102,7 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
             for section in range {
                 let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: collectionView, section: section)
                 let sectionDynamic = array[section]
-                sectionDynamic.bindTo(sectionBond)
+                sectionDynamic.bindTo(sectionBond, fire: false)
                 s.sectionBonds.insert(sectionBond, atIndex: section)
                 
                 for var idx = section + 1; idx < s.sectionBonds.count; idx++ {
@@ -134,7 +134,7 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
             for section in range {
                 let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: collectionView, section: section)
                 let sectionDynamic = array[section]
-                sectionDynamic.bindTo(sectionBond)
+                sectionDynamic.bindTo(sectionBond, fire: false)
                 
                 s.sectionBonds[section].unbind()
                 s.sectionBonds[section] = sectionBond
@@ -149,17 +149,17 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
         }
     }
     
-    public func bind(dynamic: LazyObservableArray<UICollectionViewCell>) {
-        bind(ObservableArray([dynamic]))
+    public func bind(dynamic: LazyObservableArray<UICollectionViewCell>, fire: Bool = true) {
+        bind(ObservableArray([dynamic]), fire: fire)
     }
     
     public override func bind(dynamic: Observable<Array<LazyObservableArray<UICollectionViewCell>>>, fire: Bool, strongly: Bool) {
-        super.bind(dynamic, fire: false, strongly: strongly)
+        super.bind(dynamic, fire: fire, strongly: strongly)
         if let dynamic = dynamic as? ObservableArray<LazyObservableArray<UICollectionViewCell>> {
             for section in 0..<dynamic.count {
                 let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: self.collectionView, section: section)
                 let sectionDynamic = dynamic[section]
-                sectionDynamic.bindTo(sectionBond)
+                sectionDynamic.bindTo(sectionBond, fire: false)
                 sectionBonds.append(sectionBond)
             }
             
@@ -196,10 +196,22 @@ public func ->> (left: LazyObservableArray<UICollectionViewCell>, right: UIColle
     right.bind(left)
 }
 
+public func ->| (left: LazyObservableArray<UICollectionViewCell>, right: UICollectionViewDataSourceBond) {
+    right.bind(left, fire: false)
+}
+
 public func ->> (left: LazyObservableArray<UICollectionViewCell>, right: UICollectionView) {
     left ->> right.designatedBond
 }
 
+public func ->| (left: LazyObservableArray<UICollectionViewCell>, right: UICollectionView) {
+    left ->| right.designatedBond
+}
+
 public func ->> (left: ObservableArray<LazyObservableArray<UICollectionViewCell>>, right: UICollectionView) {
     left ->> right.designatedBond
+}
+
+public func ->| (left: ObservableArray<LazyObservableArray<UICollectionViewCell>>, right: UICollectionView) {
+    left ->| right.designatedBond
 }
