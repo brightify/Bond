@@ -164,6 +164,12 @@ internal func _asyncMap<T, U>(observable: Observable<T>, _ f: (T, U -> ()) -> ()
   return proxy
 }
 
+internal func _asyncMap<T, U>(observable: Observable<T>, _ f: (T, [U] -> ()) -> ()) -> ObservableArray<U> {
+  let proxy = AsyncMapProxyObservableArray<T, U>(f)
+  observable ->> proxy
+  return proxy
+}
+
 // MARK: Filter
 
 public func filter<T>(observable: Observable<T>, _ f: T -> Bool) -> Observable<T> {

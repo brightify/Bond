@@ -143,7 +143,7 @@ public class Observable<T> {
         return bonds.count
     }
     
-    private init() {
+    internal init() {
         backingValue = nil
     }
     
@@ -315,6 +315,10 @@ public extension Observable
         return _asyncMap(self, f)
     }
     
+    public func asyncMap<U>(f: (T, [U] -> ()) -> ()) -> ObservableArray<U> {
+        return _asyncMap(self, f)
+    }
+    
     public func filter(f: T -> Bool) -> Observable<T> {
         return _filter(self, f)
     }
@@ -385,6 +389,27 @@ internal class AsyncMapProxyObservable<IN, OUT>: Observable<OUT>, Bondable {
     }
     
     private func setOutputValue(value: OUT) {
+        self.value = value
+    }
+}
+
+internal class AsyncMapProxyObservableArray<IN, OUT>: ObservableArray<OUT>, Bondable {
+    
+    internal let inputBond: Bond<IN> = .init()
+    
+    internal var designatedBond: Bond<IN> {
+        return self.inputBond
+    }
+    
+    internal init(_ action: (IN, [OUT] -> ()) -> ()) {
+        super.init(invalid: true)
+        
+        inputBond.listener = { [unowned self] in
+            action($0, self.setOutputValue)
+        }
+    }
+    
+    private func setOutputValue(value: [OUT]) {
         self.value = value
     }
 }
