@@ -299,7 +299,15 @@ public extension Observable
         return _map(self, f)
     }
     
+    public func flatMap<U>(f: T -> Observable<U>?) -> Observable<U?> {
+        return _flatMap(self, f)
+    }
+    
     public func flatMap<U>(f: T -> Observable<U>) -> Observable<U> {
+        return _flatMap(self, f)
+    }
+    
+    public func flatMap<U>(f: T -> ObservableArray<U>?) -> ObservableArray<U> {
         return _flatMap(self, f)
     }
     

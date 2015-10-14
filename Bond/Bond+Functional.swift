@@ -80,6 +80,29 @@ internal func _flatMap<T, U>(observable: Observable<T>, _ f: T -> Observable<U>)
   return dyn
 }
 
+internal func _flatMap<T, U>(observable: Observable<T>, _ f: T -> Observable<U>?) -> Observable<U?> {
+  let dyn = InternalDynamic<U?>()
+  if let value = observable.backingValue {
+    if let transformed = f(value) {
+      transformed.map { Optional($0) } ->> dyn
+    } else {
+      Observable(nil) ->> dyn
+    }
+  }
+  
+  let bond = Bond<T> { [unowned dyn] t in
+    if let transformed = f(t) {
+      transformed.map { Optional($0) } ->> dyn
+    } else {
+      Observable(nil) ->> dyn
+    }
+  }
+  dyn.retain(bond)
+  observable.bindTo(bond, fire: false)
+  
+  return dyn
+}
+
 public func flatMap<T, U>(observable: Observable<T>, _ f: T -> ObservableArray<U>) -> ObservableArray<U> {
   return _flatMap(observable, f)
 }
@@ -97,6 +120,30 @@ internal func _flatMap<T, U>(observable: Observable<T>, _ f: T -> ObservableArra
   
   let bond = Bond<T> { [unowned dyn] t in
     f(t) ->> dyn
+  }
+  dyn.retain(bond)
+  observable.bindTo(bond)
+  
+  return dyn
+}
+
+internal func _flatMap<T, U>(observable: Observable<T>, _ f: T -> ObservableArray<U>?) -> ObservableArray<U> {
+  let dyn = InternalDynamicArray<U>()
+  
+  if let value = observable.backingValue {
+    if let transformed = f(value) {
+      transformed ->> dyn
+    } else {
+      ObservableArray() ->> dyn
+    }
+  }
+  
+  let bond = Bond<T> { [unowned dyn] t in
+    if let transformed = f(t) {
+      transformed ->> dyn
+    } else {
+      ObservableArray() ->> dyn
+    }
   }
   dyn.retain(bond)
   observable.bindTo(bond)

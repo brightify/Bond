@@ -27,7 +27,9 @@
 
 // MARK: Operators
 
+infix operator ~>> { associativity left precedence 105 }
 infix operator ->> { associativity left precedence 105 }
+infix operator ~>| { associativity left precedence 105 }
 infix operator ->| { associativity left precedence 105 }
 infix operator <->> { associativity left precedence 100 }
 
