@@ -108,8 +108,8 @@ public class Observable<T> {
     private var dispatchInProgress: Bool = false
     internal var bonds: Set<BondBox<T>> = Set()
     
-    internal(set) var backingValue: T?
-    internal var noEventValue: T {
+    public var backingValue: T?
+    public var noEventValue: T {
         get {
             if let value = backingValue {
                 return value
