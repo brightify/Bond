@@ -462,92 +462,105 @@ private extension SequenceType where Generator.Element == Int {
 
 // MARK: Dynamic Array Filter Proxy
 
-//private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
-//    private unowned var sourceArray: ObservableArray<T>
-//    private var pointers: [Int]
-//    private var filterf: T -> Bool
-//    private let bond: ArrayBond<T>
-//    
-//    private init(sourceArray: ObservableArray<T>, filterf: T -> Bool) {
-//        self.sourceArray = sourceArray
-//        self.filterf = filterf
-//        self.bond = ArrayBond<T>()
-//        self.bond.bind(sourceArray, fire: false)
-//        
-//        self.pointers = ObservableArrayFilterProxy.pointersFromSource(sourceArray, filterf: filterf)
-//        
-//        super.init([])
-//        
-//        bond.didInsertListener = { [unowned self] array, indices in
-//            var insertedIndices: [Int] = []
-//            var pointers = self.pointers
-//            
-//            for idx in indices {
-//                
-//                for (index, element) in pointers.enumerate() {
-//                    if element >= idx {
-//                        pointers[index] = element + 1
-//                    }
-//                }
-//                
-//                let element = array[idx]
-//                if filterf(element) {
-//                    let position = pointers.indexOfFirstEqualOrLargerThan(idx)
-//                    pointers.insert(idx, atIndex: position)
-//                    insertedIndices.append(position)
-//                }
-//            }
-//            
-//            if insertedIndices.count > 0 {
-//                self.dispatchWillInsert(insertedIndices)
-//            }
-//            
-//            self.pointers = pointers
-//            
-//            if insertedIndices.count > 0 {
-//                self.dispatchDidInsert(insertedIndices)
-//            }
-//        }
-//        
-//        bond.willRemoveListener = { [unowned self] array, indices in
-//            var removedIndices: [Int] = []
-//            var pointers = self.pointers
-//            
-//            for idx in indices.reverse() {
-//                
-//                if let idx = pointers.indexOf(idx) {
-//                    pointers.removeAtIndex(idx)
-//                    removedIndices.append(idx)
-//                }
-//                
-//                for (index, element) in pointers.enumerate() {
-//                    if element >= idx {
-//                        pointers[index] = element - 1
-//                    }
-//                }
-//            }
-//            
-//            if removedIndices.count > 0 {
-//                self.dispatchWillRemove(removedIndices.reverse())
-//            }
-//            
-//            self.pointers = pointers
-//            
-//            if removedIndices.count > 0 {
-//                self.dispatchDidRemove(removedIndices.reverse())
-//            }
-//        }
-//        
-//        bond.didUpdateListener = { [unowned self] array, range in
-//            
-//            let idx = range.startIndex
-//            let element = array[idx]
-//            
-//            var insertedIndices: [Int] = []
-//            var removedIndices: [Int] = []
-//            var updatedIndices: [Int] = []
-//            var pointers = self.pointers
-//            
+private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
+    private unowned var sourceArray: ObservableArray<T>
+    private var pointers: [Int]
+    private let filterf: T -> Bool
+    private let bond: ArrayBond<T>
+    
+    private init(sourceArray: ObservableArray<T>, filterf: T -> Bool) {
+        self.sourceArray = sourceArray
+        self.filterf = filterf
+        self.bond = ArrayBond<T>()
+        self.bond.bind(sourceArray, fire: false)
+        var pointers: [Int] = []
+        let array = self.dynamicType.filteredArray(sourceArray.noEventValue, withPointers: &pointers, filterUsing: filterf)
+        self.pointers = pointers
+        
+        super.init(array)
+        
+        bond.didInsertListener = { [unowned self] array, range in
+            var pointers: [Int] = []
+            let filtered = self.dynamicType.filteredArray(array[range], withPointers: &pointers, filterUsing: filterf)
+            guard let firstPointer = pointers.first else { return }
+            
+            let startIndex = self.pointers.indexOfFirstEqualOrLargerThan(firstPointer)
+            let insertedRange = startIndex ..< startIndex.advancedBy(filtered.count)
+
+            self.dispatchWillInsert(self.noEventValue, insertedRange)
+            
+            self.noEventValue.insertContentsOf(filtered, at: startIndex)
+            self.pointers.insertContentsOf(pointers, at: startIndex)
+            
+            self.dispatchDidInsert(self.noEventValue, insertedRange)
+        }
+        
+        bond.willRemoveListener = { [unowned self] array, range in
+            var pointers: [Int] = []
+            let filtered = self.dynamicType.filteredArray(array[range], withPointers: &pointers, filterUsing: filterf)
+            guard let firstPointer = pointers.first, let startIndex = self.pointers.indexOf(firstPointer) else { return }
+            
+            let removedRange = startIndex ..< startIndex.advancedBy(filtered.count)
+            
+            self.dispatchWillRemove(self.noEventValue, removedRange)
+            
+            self.noEventValue.removeRange(removedRange)
+            self.pointers.removeRange(removedRange)
+            
+            self.dispatchDidRemove(self.noEventValue, removedRange)
+        }
+        
+        bond.didUpdateListener = { [unowned self] array, range in
+            
+            //let idx = range.startIndex
+            //let element = array[idx]
+            
+            var insertedIndices: [Int] = []
+            var removedIndices: [Int] = []
+            var updatedIndices: [Int] = []
+            let pointers = self.pointers
+            
+            for i in range {
+                let keep = filterf(array[i])
+                let exists = pointers.contains(i)
+                
+                if exists && keep {
+                    updatedIndices.append(i)
+                } else if exists && !keep {
+                    removedIndices.append(i)
+                } else if keep {
+                    insertedIndices.append(i)
+                }
+            }
+            
+            insertedIndices.map { (pointers.indexOfFirstEqualOrLargerThan($0 - 1), $0) }.forEach {
+                print("inserted", $0, $1, array[$1])
+                let insertedRange = $0...$0
+                self.dispatchWillInsert(self.noEventValue, insertedRange)
+                self.noEventValue.insert(array[$1], atIndex: $0)
+                self.pointers.insert($1, atIndex: $0)
+                self.dispatchDidInsert(self.noEventValue, insertedRange)
+            }
+            
+            removedIndices.map(pointers.indexOf).forEach {
+                guard let localIndex = $0 else { return }
+                print("removed", localIndex, self.noEventValue[localIndex])
+                let removedRange = localIndex...localIndex
+                self.dispatchWillRemove(self.noEventValue, removedRange)
+                self.noEventValue.removeAtIndex(localIndex)
+                self.pointers.removeAtIndex(localIndex)
+                self.dispatchDidRemove(self.noEventValue, removedRange)
+            }
+            
+            updatedIndices.map { (pointers.indexOf($0), $0) }.forEach {
+                guard let localIndex = $0 else { return }
+                print("updated", localIndex, self.noEventValue[localIndex], $1, array[$1])
+                let updatedRange = localIndex...localIndex
+                self.dispatchWillUpdate(self.noEventValue, updatedRange)
+                self.noEventValue[localIndex] = array[$1]
+                self.dispatchDidUpdate(self.noEventValue, updatedRange)
+            }
+            
 //            if let idx = pointers.indexOf(idx) {
 //                if filterf(element) {
 //                    // update
@@ -592,28 +605,44 @@ private extension SequenceType where Generator.Element == Int {
 //            if insertedIndices.count > 0 {
 //                self.dispatchDidInsert(insertedIndices)
 //            }
-//        }
-//        
-//        bond.willResetListener = { [unowned self] array in
-//            self.dispatchWillReset()
-//        }
-//        
-//        bond.didResetListener = { [unowned self] array in
-//            self.pointers = ObservableArrayFilterProxy.pointersFromSource(array, filterf: filterf)
-//            self.dispatchDidReset()
-//        }
-//    }
-//    
-//    class func pointersFromSource(sourceArray: ObservableArray<T>, filterf: T -> Bool) -> [Int] {
-//        var pointers = [Int]()
-//        for (index, element) in sourceArray.enumerate() {
-//            if filterf(element) {
-//                pointers.append(index)
-//            }
-//        }
-//        return pointers
-//    }
-//    
+        }
+        
+        bond.willResetListener = { [unowned self] array in
+            self.dispatchWillReset(self.noEventValue)
+        }
+        
+        bond.didResetListener = { [unowned self] array in
+            self.noEventValue = self.dynamicType.filteredArray(array, withPointers: &self.pointers, filterUsing: filterf)
+            self.dispatchDidReset(self.noEventValue)
+        }
+    }
+    
+    class func filteredArray<C: CollectionType where C.Generator.Element == T, C.Index == Int>(sourceArray: C, inout withPointers pointers: [Int], filterUsing filterf: T -> Bool) -> [T] {
+        let filtered = sourceArray.enumerate().filter { filterf($0.element) }
+        pointers = filtered.map { sourceArray.startIndex + $0.index }
+        return filtered.map { $0.element }
+    }
+    
+    class func rangesFromPointers(pointers: [Int]) -> [Range<Int>] {
+        var insertedRanges: [Range<Int>] = []
+        var currentRange: Range<Int>?
+        for i in pointers {
+            if let range = currentRange {
+                if i == range.endIndex {
+                    currentRange = range.startIndex...range.endIndex
+                    continue
+                } else {
+                    insertedRanges.append(range)
+                }
+            }
+            currentRange = i...i
+        }
+        if let range = currentRange {
+            insertedRanges.append(range)
+        }
+        return insertedRanges
+    }
+//
 //    override var value: [T] {
 //        get {
 //            return sourceArray.lazy.filter(filterf)
@@ -656,114 +685,114 @@ private extension SequenceType where Generator.Element == Int {
 //            return sourceArray[pointers[index]]
 //        }
 //    }
-//}
+}
 
 // MARK: Dynamic Array DeliverOn Proxy
 
-//private class ObservableArrayDeliverOnProxy<T>: ObservableArray<T> {
-//    private unowned var sourceArray: ObservableArray<T>
-//    private var queue: dispatch_queue_t
-//    private let bond: ArrayBond<T>
-//    
-//    private init(sourceArray: ObservableArray<T>, queue: dispatch_queue_t) {
-//        self.sourceArray = sourceArray
-//        self.queue = queue
-//        self.bond = ArrayBond<T>()
-//        self.bond.bind(sourceArray, fire: false)
-//        super.init([])
-//        
-//        bond.willInsertListener = { [unowned self] array, range in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchWillInsert(self?.noEventValue)
-//            }
-//        }
-//        
-//        bond.didInsertListener = { [unowned self] array, range in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchDidInsert(i)
-//            }
-//        }
-//        
-//        bond.willRemoveListener = { [unowned self] array, range in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchWillRemove(i)
-//            }
-//        }
-//        
-//        bond.didRemoveListener = { [unowned self] array, range in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchDidRemove(i)
-//            }
-//        }
-//        
-//        bond.willUpdateListener = { [unowned self] array, range in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchWillUpdate(i)
-//            }
-//        }
-//        
-//        bond.didUpdateListener = { [unowned self] array, range in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchDidUpdate(i)
-//            }
-//        }
-//        
-//        bond.willResetListener = { [unowned self] array in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchWillReset()
-//            }
-//        }
-//        
-//        bond.didResetListener = { [unowned self] array in
-//            dispatch_async(queue) { [weak self] in
-//                self?.dispatchDidReset()
-//            }
-//        }
-//    }
-//    
-//    override var value: [T] {
-//        get {
-//            fatalError("Getting proxy array value is not supported!")
-//        }
-//        set(newValue) {
-//            fatalError("Modifying proxy array is not supported!")
-//        }
-//    }
-//    
-//    override var count: Int {
-//        return sourceArray.count
-//    }
-//    
-//    override var capacity: Int {
-//        return sourceArray.capacity
-//    }
-//    
-//    override var isEmpty: Bool {
-//        return sourceArray.isEmpty
-//    }
-//    
-//    override var first: T? {
-//        if let first = sourceArray.first {
-//            return first
-//        } else {
-//            return nil
-//        }
-//    }
-//    
-//    override var last: T? {
-//        if let last = sourceArray.last {
-//            return last
-//        } else {
-//            return nil
-//        }
-//    }
-//    
-//    override subscript(index: Int) -> T {
-//        get {
-//            return sourceArray[index]
-//        }
-//    }
-//}
+private class ObservableArrayDeliverOnProxy<T>: ObservableArray<T> {
+    private unowned var sourceArray: ObservableArray<T>
+    private var queue: dispatch_queue_t
+    private let bond: ArrayBond<T>
+    
+    private init(sourceArray: ObservableArray<T>, queue: dispatch_queue_t) {
+        self.sourceArray = sourceArray
+        self.queue = queue
+        self.bond = ArrayBond<T>()
+        self.bond.bind(sourceArray, fire: false)
+        super.init([])
+        
+        bond.willInsertListener = { [unowned self] array, range in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchWillInsert(array, range)
+            }
+        }
+        
+        bond.didInsertListener = { [unowned self] array, range in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchDidInsert(array, range)
+            }
+        }
+        
+        bond.willRemoveListener = { [unowned self] array, range in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchWillRemove(array, range)
+            }
+        }
+        
+        bond.didRemoveListener = { [unowned self] array, range in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchDidRemove(array, range)
+            }
+        }
+        
+        bond.willUpdateListener = { [unowned self] array, range in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchWillUpdate(array, range)
+            }
+        }
+        
+        bond.didUpdateListener = { [unowned self] array, range in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchDidUpdate(array, range)
+            }
+        }
+        
+        bond.willResetListener = { [unowned self] array in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchWillReset(array)
+            }
+        }
+        
+        bond.didResetListener = { [unowned self] array in
+            dispatch_async(queue) { [weak self] in
+                self?.dispatchDidReset(array)
+            }
+        }
+    }
+    
+    override var value: [T] {
+        get {
+            fatalError("Getting proxy array value is not supported!")
+        }
+        set(newValue) {
+            fatalError("Modifying proxy array is not supported!")
+        }
+    }
+    
+    override var count: Int {
+        return sourceArray.count
+    }
+    
+    override var capacity: Int {
+        return sourceArray.capacity
+    }
+    
+    override var isEmpty: Bool {
+        return sourceArray.isEmpty
+    }
+    
+    override var first: T? {
+        if let first = sourceArray.first {
+            return first
+        } else {
+            return nil
+        }
+    }
+    
+    override var last: T? {
+        if let last = sourceArray.last {
+            return last
+        } else {
+            return nil
+        }
+    }
+    
+    override subscript(index: Int) -> T {
+        get {
+            return sourceArray[index]
+        }
+    }
+}
 
 // MARK: Dynamic Array additions
 public extension ObservableArray
@@ -786,9 +815,9 @@ public extension ObservableArray
         return _lazyMap(self, mapf)
     }
     
-//    public func filter(f: T -> Bool) -> ObservableArray<T> {
-//        return _filter(self, f)
-//    }
+    public func filter(f: T -> Bool) -> ObservableArray<T> {
+        return _filter(self, f)
+    }
 }
 
 // MARK: Map
@@ -803,12 +832,12 @@ private func _lazyMap<T, U>(dynamicArray: ObservableArray<T>, _ f: (Int, T) -> U
 
 // MARK: Filter
 
-//private func _filter<T>(dynamicArray: ObservableArray<T>, _ f: T -> Bool) -> ObservableArray<T> {
-//    return ObservableArrayFilterProxy(sourceArray: dynamicArray, filterf: f)
-//}
+private func _filter<T>(dynamicArray: ObservableArray<T>, _ f: T -> Bool) -> ObservableArray<T> {
+    return ObservableArrayFilterProxy(sourceArray: dynamicArray, filterf: f)
+}
 
 // MARK: DeliverOn
 
-//public func deliver<T>(dynamicArray: ObservableArray<T>, on queue: dispatch_queue_t) -> ObservableArray<T> {
-//    return ObservableArrayDeliverOnProxy(sourceArray: dynamicArray, queue: queue)
-//}
+public func deliver<T>(dynamicArray: ObservableArray<T>, on queue: dispatch_queue_t) -> ObservableArray<T> {
+    return ObservableArrayDeliverOnProxy(sourceArray: dynamicArray, queue: queue)
+}
