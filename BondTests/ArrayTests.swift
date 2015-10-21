@@ -314,6 +314,27 @@ class ArrayTests: XCTestCase {
     XCTAssertEqual(mapped.value, [100])
   }
   
+  func testArrayValueFlatMap() {
+    class A {
+      let x = Observable<Int>(0)
+    }
+    
+    let array = DynamicArray<A>()
+    let mapped = array.flatMap { $0.x }
+    
+    XCTAssertEqual(array.count, 0)
+    XCTAssertEqual(mapped.count, 0)
+    
+    let a1 = A()
+    a1.x.value = 10
+    array.append(a1)
+    XCTAssertEqual(mapped.value, [10])
+    
+    a1.x.value = 100
+    XCTAssertEqual(mapped.value, [100])
+
+  }
+  
   func testArrayMapCallCount() {
     class Test {
       var value: Int

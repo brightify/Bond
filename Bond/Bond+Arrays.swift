@@ -515,6 +515,68 @@ private class ObservableArrayFlatMapProxy<T, U>: MutableObservableArray<U> {
     }
 }
 
+private class ObservableArrayValueFlatMapProxy<T, U>: MutableObservableArray<U> {
+    private let bond: ArrayBond<T> = .init()
+    
+    private var valueBonds: [Bond<U>] = []
+    
+    private init(sourceArray: ObservableArray<T>, mapf: (Int, T) -> Observable<U>) {
+        bond.bind(sourceArray, fire: false)
+        
+        super.init([])
+        noEventValue = sourceArray.value.enumerate().map(mapf).enumerate()
+            .map(ObservableArrayValueFlatMapProxy.bindValues(&valueBonds, parent: self))
+        
+        bond.listener = { [unowned self] array in
+            self.valueBonds = []
+            self.noEventValue = sourceArray.value.enumerate().map(mapf).enumerate()
+                .map(ObservableArrayValueFlatMapProxy.bindValues(&self.valueBonds, parent: self))
+            self.dispatch(self.noEventValue)
+        }
+        
+        bond.willInsertListener = { [unowned self] array, range in
+            self.dispatchWillInsert(self.noEventValue, range)
+        }
+        
+        bond.didInsertListener = { [unowned self] array, range in
+            self.dispatchDidInsert(self.noEventValue, range)
+        }
+        
+        bond.willRemoveListener = { [unowned self] array, range in
+            self.dispatchWillRemove(self.noEventValue, range)
+        }
+        
+        bond.didRemoveListener = { [unowned self] array, range in
+            self.dispatchDidRemove(self.noEventValue, range)
+        }
+        
+        bond.willUpdateListener = { [unowned self] array, range in
+            self.dispatchWillUpdate(self.noEventValue, range)
+        }
+        
+        bond.didUpdateListener = { [unowned self] array, range in
+            self.dispatchDidUpdate(self.noEventValue, range)
+        }
+        
+        bond.willResetListener = { [unowned self] array in
+            self.dispatchWillReset(self.noEventValue)
+        }
+        
+        bond.didResetListener = { [unowned self] array in
+            self.dispatchDidReset(self.noEventValue)
+        }
+    }
+    
+    private static func bindValues(inout valueBonds: [Bond<U>], parent: MutableObservableArray<U>)(index: Int, value: Observable<U>) -> U {
+        let bond = Bond<U> { [unowned parent] in
+            parent[index] = $0
+        }
+        bond.bind(value, fire: false)
+        valueBonds.append(bond)
+        return value.value
+    }
+}
+
 private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
     private let bond: ArrayBond<T>
     
@@ -930,6 +992,16 @@ public extension ObservableArray
         return _map(self, mapf)
     }
     
+    public func flatMap<U>(f: T -> Observable<U>) -> ObservableArray<U> {
+        return _flatMap(self) {
+            f($1)
+        }
+    }
+    
+    public func flatMap<U>(f: (Int, T) -> Observable<U>) -> ObservableArray<U> {
+        return _flatMap(self, f)
+    }
+    
     public func flatMap<U>(f: T -> ObservableArray<U>) -> ObservableArray<U> {
         return _flatMap(self) {
             f($1)
@@ -958,6 +1030,10 @@ public extension ObservableArray
 
 private func _map<T, U>(dynamicArray: ObservableArray<T>, _ f: (Int, T) -> U) -> ObservableArrayMapProxy<T, U> {
     return ObservableArrayMapProxy(sourceArray: dynamicArray, mapf: f)
+}
+
+internal func _flatMap<T, U>(observable: ObservableArray<T>, _ f: (Int, T) -> Observable<U>) -> ObservableArray<U> {
+    return ObservableArrayValueFlatMapProxy(sourceArray: observable, mapf: f)
 }
 
 internal func _flatMap<T, U>(observable: ObservableArray<T>, _ f: (Int, T) -> ObservableArray<U>) -> ObservableArray<U> {
