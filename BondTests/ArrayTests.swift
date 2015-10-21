@@ -64,7 +64,7 @@ class ArrayTests: XCTestCase {
     XCTAssert(array.value == [3, 2, 4])
     XCTAssert(element == 1)
     
-    array.insertContentsOf([8, 9], atIndex: 1)
+    array.insertContentsOf([8, 9], at: 1)
     XCTAssert(array.count == 5)
     XCTAssert(array.value == [3, 8, 9, 2, 4])
     
@@ -122,7 +122,7 @@ class ArrayTests: XCTestCase {
     XCTAssertEqual(indices, [1])
     XCTAssert(objects == [1])
     
-    array.insertContentsOf([8, 9], atIndex: 1)
+    array.insertContentsOf([8, 9], at: 1)
     XCTAssertEqual(indices, [1, 2])
     
     array[0] = 0
@@ -208,7 +208,7 @@ class ArrayTests: XCTestCase {
     XCTAssertEqual(filtered.value, [6])
     resetState()
     
-    array.insertContentsOf([8, 9, 3], atIndex: 1)   // [3, 8, 9, 3, 1, 6, 4]
+    array.insertContentsOf([8, 9, 3], at: 1)   // [3, 8, 9, 3, 1, 6, 4]
     XCTAssertEqual(array.value, [3, 8, 9, 3, 1, 6, 4])
     XCTAssertEqual(indices, [0, 1])
     XCTAssertEqual(filtered.value, [8, 9, 6])
@@ -258,7 +258,7 @@ class ArrayTests: XCTestCase {
     XCTAssertEqual(mapped[0], 4)
     XCTAssertEqual(mapped[1], 2)
     
-    array.insertContentsOf([3, 4], atIndex: 1)
+    array.insertContentsOf([3, 4], at: 1)
     XCTAssertEqual(mapped.count, 4)
     XCTAssertEqual(mapped.observableCount.value, 4)
     XCTAssertEqual(mapped[0], 4)
@@ -281,6 +281,37 @@ class ArrayTests: XCTestCase {
     
     array.removeAll(true)
     XCTAssertEqual(mapped.count, 0)
+  }
+  
+  func testArrayFlatMap() {
+    let array = DynamicArray<DynamicArray<Int>>([])
+    let mapped = array.flatMap { $0 }
+    
+    XCTAssertEqual(array.count, 0)
+    XCTAssertEqual(mapped.count, 0)
+    
+    let d1 = DynamicArray<Int>([1])
+    array.append(d1)
+    XCTAssertEqual(mapped.value, [1])
+
+    d1.append(2)
+    XCTAssertEqual(mapped.value, [1, 2])
+
+    let d2 = DynamicArray<Int>([3, 4, 5, 6])
+    array.insert(d2, atIndex: 0)
+    XCTAssertEqual(mapped.value, [3, 4, 5, 6, 1, 2])
+    
+    d1.removeAtIndex(0)
+    XCTAssertEqual(mapped.value, [3, 4, 5, 6, 2])
+    
+    d2.removeRange(1...2)
+    XCTAssertEqual(mapped.value, [3, 6, 2])
+    
+    d1[0] = 100
+    XCTAssertEqual(mapped.value, [3, 6, 100])
+    
+    array.removeAtIndex(0)
+    XCTAssertEqual(mapped.value, [100])
   }
   
   func testArrayMapCallCount() {
@@ -333,7 +364,7 @@ class ArrayTests: XCTestCase {
     XCTAssertEqual(mapped.count, 0)
     XCTAssertEqual(callCount, 6)
     
-    array.insertContentsOf([1, 2, 3, 4], atIndex: 0)
+    array.insertContentsOf([1, 2, 3, 4], at: 0)
     XCTAssertEqual(mapped.count, 4)
     XCTAssertEqual(callCount, 6)
     
@@ -388,7 +419,7 @@ class ArrayTests: XCTestCase {
     array.insert(3, atIndex: 0)
     XCTAssert(mapped == [6])
     
-    array.insertContentsOf([1, 4], atIndex: 1)
+    array.insertContentsOf([1, 4], at: 1)
     XCTAssert(mapped == [6, 8])
     
     array.removeLast()

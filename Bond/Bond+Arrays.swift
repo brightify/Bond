@@ -195,7 +195,7 @@ public class MutableObservableArray<T>: ObservableArray<T> {
     }
     
     public func append(array: Array<T>) {
-        insertContentsOf(array, atIndex: noEventValue.count)
+        insertContentsOf(array, at: noEventValue.count)
     }
     
     public func removeLast() -> T {
@@ -210,12 +210,12 @@ public class MutableObservableArray<T>: ObservableArray<T> {
         dispatchDidInsert(noEventValue, range)
     }
     
-    public func insertContentsOf(array: Array<T>, atIndex i: Int) {
-        guard array.count > 0 else { return }
-        
-        let range = i ..< i.advancedBy(array.count)
+    public func insertContentsOf<C : CollectionType where C.Generator.Element == T, C.Index.Distance == Int>(newElements: C, at i: Int) {
+        guard newElements.count > 0 else { return }
+        newElements.count
+        let range = i ..< i.advancedBy(newElements.count)
         dispatchWillInsert(noEventValue, range)
-        noEventValue.insertContentsOf(array, at: i)
+        noEventValue.insertContentsOf(newElements, at: i)
         dispatchDidInsert(noEventValue, range)
     }
     
@@ -227,11 +227,31 @@ public class MutableObservableArray<T>: ObservableArray<T> {
         return object
     }
     
+    public func removeRange(subRange: Range<Int>) {
+        dispatchWillRemove(noEventValue, subRange)
+        noEventValue.removeRange(subRange)
+        dispatchDidRemove(noEventValue, subRange)
+    }
+    
     public func removeAll(keepCapacity: Bool) {
         let range = 0 ..< noEventValue.count
         dispatchWillRemove(noEventValue, range)
         noEventValue.removeAll(keepCapacity: keepCapacity)
         dispatchDidRemove(noEventValue, range)
+    }
+    
+    public func replaceRange<C: CollectionType where C.Generator.Element == T, C.Index == Int>(subRange: Range<Int>, with newElements: C) {
+        // Check if the backing value contains the subRange
+        if subRange.count == newElements.count {
+            dispatchWillUpdate(noEventValue, subRange)
+            subRange.enumerate().forEach {
+                self.noEventValue[$1] = newElements[$0]
+            }
+            dispatchDidUpdate(noEventValue, subRange)
+        } else {
+            removeRange(subRange)
+            insertContentsOf(newElements, at: subRange.startIndex)
+        }
     }
     
     public override subscript(index: Int) -> T {
@@ -388,6 +408,113 @@ private class LazyObservableArrayMapProxy<T, U>: LazyObservableArray<U> {
     
 }
 
+private class FlatMapContainer<T> {
+    private let bond: ArrayBond<T> = .init()
+    private let previous: FlatMapContainer<T>?
+    private let target: ObservableArray<T>
+    
+    private var count: Int = 0
+
+    private init(previous: FlatMapContainer<T>?, parent: MutableObservableArray<T>, target: ObservableArray<T>) {
+        self.previous = previous
+        self.target = target
+        self.count = target.count
+        bond.bind(target, fire: false)
+        
+        bond.didInsertListener = { [unowned self, unowned parent] array, range in
+            parent.insertContentsOf(array[range], at: self.absoluteIndex(range.startIndex))
+            self.count = array.count
+        }
+        
+        bond.didRemoveListener = { [unowned self, unowned parent] array, range in
+            parent.removeRange(self.absoluteRange(range))
+            self.count = array.count
+        }
+        
+        bond.didUpdateListener = { [unowned self, unowned parent] array, range in
+            parent.replaceRange(self.absoluteRange(range), with: array[range])
+        }
+        
+        bond.didResetListener = { [unowned self, unowned parent] array in
+            parent.replaceRange(self.range, with: array)
+            self.count = array.count
+        }
+    }
+    
+    private var range: Range<Int> {
+        let startIndex = previous?.range.endIndex ?? 0
+        return startIndex ..< startIndex + count
+    }
+    
+    private func absoluteIndex(relativeIndex: Int) -> Int {
+        return range.startIndex + relativeIndex
+    }
+    
+    private func absoluteRange(relativeRange: Range<Int>) -> Range<Int> {
+        let startIndex = range.startIndex
+        return (startIndex + relativeRange.startIndex) ..< (startIndex + relativeRange.endIndex)
+    }
+    
+}
+
+private class ObservableArrayFlatMapProxy<T, U>: MutableObservableArray<U> {
+    private let bond: ArrayBond<T> = .init()
+
+    private var lastSubarrayLink: FlatMapContainer<U>?
+    
+    private init(sourceArray: ObservableArray<T>, mapf: (Int, T) -> ObservableArray<U>) {
+        bond.bind(sourceArray, fire: false)
+        
+        super.init([])
+        noEventValue = sourceArray.value.enumerate().map(mapf)
+            .reduce([], combine: ObservableArrayFlatMapProxy.bindSubarrays(&lastSubarrayLink, parent: self))
+        
+        bond.listener = { [unowned self] array in
+            self.lastSubarrayLink = nil
+            self.noEventValue = sourceArray.value.enumerate().map(mapf)
+                .reduce([], combine: ObservableArrayFlatMapProxy.bindSubarrays(&self.lastSubarrayLink, parent: self))
+            self.dispatch(self.noEventValue)
+        }
+        
+        bond.willInsertListener = { [unowned self] array, range in
+            self.dispatchWillInsert(self.noEventValue, range)
+        }
+        
+        bond.didInsertListener = { [unowned self] array, range in
+            self.dispatchDidInsert(self.noEventValue, range)
+        }
+        
+        bond.willRemoveListener = { [unowned self] array, range in
+            self.dispatchWillRemove(self.noEventValue, range)
+        }
+        
+        bond.didRemoveListener = { [unowned self] array, range in
+            self.dispatchDidRemove(self.noEventValue, range)
+        }
+        
+        bond.willUpdateListener = { [unowned self] array, range in
+            self.dispatchWillUpdate(self.noEventValue, range)
+        }
+        
+        bond.didUpdateListener = { [unowned self] array, range in
+            self.dispatchDidUpdate(self.noEventValue, range)
+        }
+        
+        bond.willResetListener = { [unowned self] array in
+            self.dispatchWillReset(self.noEventValue)
+        }
+        
+        bond.didResetListener = { [unowned self] array in
+            self.dispatchDidReset(self.noEventValue)
+        }
+    }
+    
+    private static func bindSubarrays(inout lastSubarrayLink: FlatMapContainer<U>?, parent: MutableObservableArray<U>)(accumulator: [U], array: ObservableArray<U>) -> [U] {
+        lastSubarrayLink = FlatMapContainer<U>(previous: lastSubarrayLink, parent: parent, target: array)
+        return accumulator + array.value
+    }
+}
+
 private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
     private let bond: ArrayBond<T>
     
@@ -534,7 +661,6 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
             }
             
             insertedIndices.map { (pointers.indexOfFirstEqualOrLargerThan($0 - 1), $0) }.forEach {
-                print("inserted", $0, $1, array[$1])
                 let insertedRange = $0...$0
                 self.dispatchWillInsert(self.noEventValue, insertedRange)
                 self.noEventValue.insert(array[$1], atIndex: $0)
@@ -544,7 +670,6 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
             
             removedIndices.map(pointers.indexOf).forEach {
                 guard let localIndex = $0 else { return }
-                print("removed", localIndex, self.noEventValue[localIndex])
                 let removedRange = localIndex...localIndex
                 self.dispatchWillRemove(self.noEventValue, removedRange)
                 self.noEventValue.removeAtIndex(localIndex)
@@ -554,7 +679,6 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
             
             updatedIndices.map { (pointers.indexOf($0), $0) }.forEach {
                 guard let localIndex = $0 else { return }
-                print("updated", localIndex, self.noEventValue[localIndex], $1, array[$1])
                 let updatedRange = localIndex...localIndex
                 self.dispatchWillUpdate(self.noEventValue, updatedRange)
                 self.noEventValue[localIndex] = array[$1]
@@ -806,6 +930,16 @@ public extension ObservableArray
         return _map(self, mapf)
     }
     
+    public func flatMap<U>(f: T -> ObservableArray<U>) -> ObservableArray<U> {
+        return _flatMap(self) {
+            f($1)
+        }
+    }
+    
+    public func flatMap<U>(f: (Int, T) -> ObservableArray<U>) -> ObservableArray<U> {
+        return _flatMap(self, f)
+    }
+    
     public func lazyMap<U>(f: (Int, T) -> U) -> LazyObservableArray<U> {
         return _lazyMap(self, f)
     }
@@ -824,6 +958,10 @@ public extension ObservableArray
 
 private func _map<T, U>(dynamicArray: ObservableArray<T>, _ f: (Int, T) -> U) -> ObservableArrayMapProxy<T, U> {
     return ObservableArrayMapProxy(sourceArray: dynamicArray, mapf: f)
+}
+
+internal func _flatMap<T, U>(observable: ObservableArray<T>, _ f: (Int, T) -> ObservableArray<U>) -> ObservableArray<U> {
+    return ObservableArrayFlatMapProxy(sourceArray: observable, mapf: f)
 }
 
 private func _lazyMap<T, U>(dynamicArray: ObservableArray<T>, _ f: (Int, T) -> U) -> LazyObservableArrayMapProxy<T, U> {
