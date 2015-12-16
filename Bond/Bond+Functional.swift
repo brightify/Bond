@@ -381,21 +381,31 @@ public func any<T>(observables: [Observable<T>]) -> Observable<T> {
 
 // MARK: Throttle
 
+private func cancellableDispatchAfter(time: dispatch_time_t, _ queue: dispatch_queue_t, _ block: () -> ()) -> () -> () {
+  var cancelled: Bool = false
+  dispatch_after(time, queue) {
+    if cancelled == false {
+      block()
+    }
+  }
+  return {
+    cancelled = true
+  }
+}
+
 internal func _throttle<T>(observable: Observable<T>, _ seconds: Double, _ queue: dispatch_queue_t) -> Observable<T> {
   let dyn = InternalDynamic<T>()
-  var shouldDispatch: Bool = true
-  
-  let bond = Bond<T> { _ in
-    if shouldDispatch {
-      shouldDispatch = false
-      let delay = dispatch_time(DISPATCH_TIME_NOW, Int64(seconds * Double(NSEC_PER_SEC)))
-      dispatch_after(delay, queue) { [weak dyn, weak observable] in
-        if let dyn = dyn, observable = observable {
-          dyn.value = observable.value
-        }
-        shouldDispatch = true
-      }
+  var cancel: () -> () = { }
+  let bond = Bond<T> { value in
+    cancel()
+    let delay = dispatch_time(DISPATCH_TIME_NOW, Int64(seconds * Double(NSEC_PER_SEC)))
+    cancel = cancellableDispatchAfter(delay, queue) { [weak dyn] in
+      dyn?.value = value
     }
+  }
+  
+  if observable.valid {
+    dyn.value = observable.value
   }
   
   dyn.retain(bond)

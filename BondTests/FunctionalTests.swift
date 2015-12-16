@@ -321,6 +321,40 @@ class ReduceTests: XCTestCase {
     XCTAssert(a.valid == true, "Should not be faulty")
   }
   
+  func testThrottle() {
+    let d1 = Dynamic<Int>(0)
+    var dispatchedValues: [Int] = []
+    
+    let bond = Bond<Int> { value in
+      dispatchedValues.append(value)
+    }
+    
+    d1.throttle(0.1) ->> bond
+    
+    let expectation = expectationWithDescription("Values throttled")
+    
+    XCTAssertEqual(dispatchedValues, [0])
+    for i in 1...50 {
+      d1.value = i
+    }
+    XCTAssertEqual(dispatchedValues, [0])
+    
+    dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(0.2 * Double(NSEC_PER_SEC))), dispatch_get_main_queue()) {
+      XCTAssertEqual(dispatchedValues, [0, 50])
+      for i in 51...100 {
+        d1.value = i
+      }
+      XCTAssertEqual(dispatchedValues, [0, 50])
+      
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, Int64(0.2 * Double(NSEC_PER_SEC))), dispatch_get_main_queue()) {
+        XCTAssertEqual(dispatchedValues, [0, 50, 100])
+        expectation.fulfill()
+      }
+    }
+    
+    waitForExpectationsWithTimeout(1, handler: nil)
+  }
+  
   func testFilterMapChain() {
     var callCount = 0
     let d1 = Dynamic<Int>(0)
