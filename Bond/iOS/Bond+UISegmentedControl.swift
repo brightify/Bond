@@ -66,9 +66,10 @@ class SegmentedControlSelectedIndexDynamic<T>: InternalDynamic<Int> {
   init(control: UISegmentedControl, initialValue: Int) {
     helper = SegmentedControlDynamicHelper(control: control)
     super.init(initialValue)
-    helper.listener = { [unowned self, unowned control] _ in
+    // We need to use `weak control` because `unowned causes a crash when capturing the `control` instance
+    helper.listener = { [unowned self, weak control] _ in
       self.updatingFromSelf = true
-      self.value = control.selectedSegmentIndex
+      self.value = control!.selectedSegmentIndex
       self.updatingFromSelf = false
     }
   }
