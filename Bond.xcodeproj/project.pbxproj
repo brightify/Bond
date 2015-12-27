@@ -25,6 +25,7 @@
 		03ACB50A1AB555D6001B3E64 /* Images.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 03ACB5091AB555D6001B3E64 /* Images.xcassets */; };
 		03ACB50D1AB555D6001B3E64 /* LaunchScreen.xib in Resources */ = {isa = PBXBuildFile; fileRef = 03ACB50B1AB555D6001B3E64 /* LaunchScreen.xib */; };
 		03ACB5231AB6C840001B3E64 /* AssertEqualForOptionals.swift in Sources */ = {isa = PBXBuildFile; fileRef = 03ACB5221AB6C840001B3E64 /* AssertEqualForOptionals.swift */; };
+		18A7D6E21C2F1D5A00F82F17 /* SourceLocation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 18A7D6E11C2F1D5A00F82F17 /* SourceLocation.swift */; };
 		5AC4262C1B555918009B9C6F /* Bond+UISegmentedControl.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC4262B1B555918009B9C6F /* Bond+UISegmentedControl.swift */; };
 		5AC4262E1B555933009B9C6F /* UISegmentedControlTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 5AC4262D1B555933009B9C6F /* UISegmentedControlTests.swift */; };
 		69491BB41A7C217100A13B6B /* Bond.h in Headers */ = {isa = PBXBuildFile; fileRef = 69491BB31A7C217100A13B6B /* Bond.h */; settings = {ATTRIBUTES = (Public, ); }; };
@@ -147,6 +148,7 @@
 		03ACB5171AB555D6001B3E64 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		03ACB5181AB555D6001B3E64 /* iOSAppForTestingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = iOSAppForTestingTests.swift; sourceTree = "<group>"; };
 		03ACB5221AB6C840001B3E64 /* AssertEqualForOptionals.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AssertEqualForOptionals.swift; sourceTree = "<group>"; };
+		18A7D6E11C2F1D5A00F82F17 /* SourceLocation.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SourceLocation.swift; sourceTree = "<group>"; };
 		5AC4262B1B555918009B9C6F /* Bond+UISegmentedControl.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Bond+UISegmentedControl.swift"; sourceTree = "<group>"; };
 		5AC4262D1B555933009B9C6F /* UISegmentedControlTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = UISegmentedControlTests.swift; sourceTree = "<group>"; };
 		69491BAE1A7C217100A13B6B /* Bond.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Bond.framework; sourceTree = BUILT_PRODUCTS_DIR; };
@@ -346,6 +348,7 @@
 				69491BCC1A7C21B600A13B6B /* Bond+Foundation.swift */,
 				EC048D141AA2386A00E9794C /* Bond+Functional.swift */,
 				EC048D171AA238AF00E9794C /* Bond+Operators.swift */,
+				18A7D6E11C2F1D5A00F82F17 /* SourceLocation.swift */,
 				EAD8B2E71B41B04500995CE9 /* Shared */,
 				EAD8B2DE1B41B04500995CE9 /* OSX */,
 				EAD8B2EA1B41B04500995CE9 /* iOS */,
@@ -690,6 +693,7 @@
 				69491BD01A7C21B600A13B6B /* Bond+Foundation.swift in Sources */,
 				EAD8B3121B41B04500995CE9 /* Bond+UIButton.swift in Sources */,
 				EAD8B30A1B41B04500995CE9 /* Bond+CALayer.swift in Sources */,
+				18A7D6E21C2F1D5A00F82F17 /* SourceLocation.swift in Sources */,
 				EC048D181AA238AF00E9794C /* Bond+Operators.swift in Sources */,
 				EAD8B32A1B41B04500995CE9 /* Bond+UIView.swift in Sources */,
 				5AC4262C1B555918009B9C6F /* Bond+UISegmentedControl.swift in Sources */,

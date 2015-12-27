@@ -50,8 +50,8 @@ public class ArrayBond<T>: Bond<Array<T>> {
     public var willResetListener: ([T] -> Void)?
     public var didResetListener: ([T] -> Void)?
     
-    public override init() {
-        super.init()
+    public override init(file: String = __FILE__, line: UInt = __LINE__) {
+        super.init(file: file, line: line)
     }
     
     override func fireListenerInternally(observable: Observable<[T]>) {
@@ -113,12 +113,12 @@ public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
         return noEventValue.last
     }
     
-    public convenience override init() {
-        self.init([])
+    public convenience override init(file: String = __FILE__, line: UInt = __LINE__) {
+        self.init([], file: file, line: line)
     }
     
-    public override init(_ value: Array<T>) {
-        super.init(value)
+    public override init(_ value: Array<T>, file: String = __FILE__, line: UInt = __LINE__) {
+        super.init(value, file: file, line: line)
     }
     
     public subscript(index: Int) -> T {
@@ -179,12 +179,12 @@ public class ObservableArray<T>: Observable<Array<T>>, SequenceType {
 
 public class MutableObservableArray<T>: ObservableArray<T> {
     
-    public convenience init() {
-        self.init([])
+    public convenience init(file: String = __FILE__, line: UInt = __LINE__) {
+        self.init([], file: file, line: line)
     }
     
-    public override init(_ value: Array<T>) {
-        super.init(value)
+    public override init(_ value: Array<T>, file: String = __FILE__, line: UInt = __LINE__) {
+        super.init(value, file: file, line: line)
     }
     
     public func append(newElement: T) {
@@ -274,18 +274,19 @@ public class MutableObservableArray<T>: ObservableArray<T> {
 // MARK: Dynamic array
 
 public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
-    public let arrayBond: ArrayBond<T> = ArrayBond()
+    public let arrayBond: ArrayBond<T>
     
     public var designatedBond: Bond<Array<T>> {
         return arrayBond
     }
     
-    public convenience init() {
-        self.init([])
+    public convenience init(file: String = __FILE__, line: UInt = __LINE__) {
+        self.init([], file: file, line: line)
     }
     
-    public override init(_ array: Array<T>) {
-        super.init(array)
+    public override init(_ array: Array<T>, file: String = __FILE__, line: UInt = __LINE__) {
+        arrayBond = ArrayBond(file: file, line: line)
+        super.init(array, file: file, line: line)
         arrayBond.listener = { [unowned self] in
             self.noEventValue = $0
             self.dispatch($0)
@@ -327,8 +328,8 @@ public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
 
 public class LazyObservableArray<T>: ObservableArray<() -> T> {
     
-    public override init(_ value: [() -> T]) {
-        super.init(value)
+    public override init(_ value: [() -> T], file: String = __FILE__, line: UInt = __LINE__) {
+        super.init(value, file: file, line: line)
     }
     
     public func eager() -> ObservableArray<T> {
@@ -350,13 +351,13 @@ public class LazyObservableArray<T>: ObservableArray<() -> T> {
 private class LazyObservableArrayMapProxy<T, U>: LazyObservableArray<U> {
     private let bond: ArrayBond<T>
     
-    private init(sourceArray: ObservableArray<T>, mapf: (Int, T) -> U) {
-        bond = ArrayBond<T>()
+    private init(sourceArray: ObservableArray<T>, file: String = __FILE__, line: UInt = __LINE__, mapf: (Int, T) -> U) {
+        bond = ArrayBond<T>(file: file, line: line)
         bond.bind(sourceArray, fire: false)
         
         let lazyArray = LazyObservableArrayMapProxy.createArray(sourceArray.noEventValue, mapf)
         
-        super.init(lazyArray)
+        super.init(lazyArray, file: file, line: line)
         
         bond.listener = { [unowned self] array in
             self.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
@@ -409,13 +410,14 @@ private class LazyObservableArrayMapProxy<T, U>: LazyObservableArray<U> {
 }
 
 private class FlatMapContainer<T> {
-    private let bond: ArrayBond<T> = .init()
+    private let bond: ArrayBond<T>
     private let previous: FlatMapContainer<T>?
     private let target: ObservableArray<T>
     
     private var count: Int = 0
 
-    private init(previous: FlatMapContainer<T>?, parent: MutableObservableArray<T>, target: ObservableArray<T>) {
+    private init(previous: FlatMapContainer<T>?, parent: MutableObservableArray<T>, target: ObservableArray<T>, file: String = __FILE__, line: UInt = __LINE__) {
+        bond = ArrayBond(file: file, line: line)
         self.previous = previous
         self.target = target
         self.count = target.count
@@ -458,11 +460,12 @@ private class FlatMapContainer<T> {
 }
 
 private class ObservableArrayFlatMapProxy<T, U>: MutableObservableArray<U> {
-    private let bond: ArrayBond<T> = .init()
+    private let bond: ArrayBond<T>
 
     private var lastSubarrayLink: FlatMapContainer<U>?
     
-    private init(sourceArray: ObservableArray<T>, mapf: (Int, T) -> ObservableArray<U>) {
+    private init(sourceArray: ObservableArray<T>, file: String = __FILE__, line: UInt = __LINE__, mapf: (Int, T) -> ObservableArray<U>) {
+        bond = ArrayBond(file: file, line: line)
         bond.bind(sourceArray, fire: false)
         
         super.init([])
@@ -516,11 +519,12 @@ private class ObservableArrayFlatMapProxy<T, U>: MutableObservableArray<U> {
 }
 
 private class ObservableArrayValueFlatMapProxy<T, U>: MutableObservableArray<U> {
-    private let bond: ArrayBond<T> = .init()
+    private let bond: ArrayBond<T>
     
     private var valueBonds: [Bond<U>] = []
     
-    private init(sourceArray: ObservableArray<T>, mapf: (Int, T) -> Observable<U>) {
+    private init(sourceArray: ObservableArray<T>, file: String = __FILE__, line: UInt = __LINE__, mapf: (Int, T) -> Observable<U>) {
+        bond = ArrayBond(file: file, line: line)
         bond.bind(sourceArray, fire: false)
         
         super.init([])

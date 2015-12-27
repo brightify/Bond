@@ -120,10 +120,10 @@ extension NSIndexSet {
 private class UITableViewDataSourceSectionBond: ArrayBond<() -> UITableViewCell> {
     weak var tableView: UITableView?
     var section: Int
-    init(tableView: UITableView?, section: Int, disableAnimation: Bool = false) {
+    init(tableView: UITableView?, section: Int, disableAnimation: Bool = false, file: String = __FILE__, line: UInt = __LINE__) {
         self.tableView = tableView
         self.section = section
-        super.init()
+        super.init(file: file, line: line)
         
         self.didInsertListener = { [unowned self] a, i in
             if let tableView: UITableView = self.tableView {
@@ -178,7 +178,7 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
         }
     }
     
-    public init(tableView: UITableView, disableAnimation: Bool = false) {
+    public init(tableView: UITableView, disableAnimation: Bool = false, file: String = __FILE__, line: UInt = __LINE__) {
         self.disableAnimation = disableAnimation
         self.tableView = tableView
         super.init()
@@ -191,9 +191,9 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
                 tableView.insertSections(NSIndexSet(array: Array(range)), withRowAnimation: UITableViewRowAnimation.Automatic)
                 
                 for section in range {
-                    let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation)
+                    let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation, file: file, line: line)
                     let sectionObservable = array[section]
-                    sectionObservable.bindTo(sectionBond, fire: false)
+                    sectionObservable.bindTo(sectionBond, fire: false, file: file, line: line)
                     s.sectionBonds.insert(sectionBond, atIndex: section)
                     
                     for var idx = section + 1; idx < s.sectionBonds.count; idx++ {
@@ -212,7 +212,7 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
                 tableView.beginUpdates()
                 tableView.deleteSections(NSIndexSet(array: Array(range)), withRowAnimation: UITableViewRowAnimation.Automatic)
                 for section in range.sort(>) {
-                    s.sectionBonds[section].unbind()
+                    s.sectionBonds[section].unbind(file: file, line: line)
                     s.sectionBonds.removeAtIndex(section)
                     
                     for var idx = section; idx < s.sectionBonds.count; idx++ {
@@ -232,11 +232,11 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
                 tableView.reloadSections(NSIndexSet(array: Array(range)), withRowAnimation: UITableViewRowAnimation.Automatic)
                 
                 for section in range {
-                    let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation)
+                    let sectionBond = UITableViewDataSourceSectionBond(tableView: tableView, section: section, disableAnimation: disableAnimation, file: file, line: line)
                     let sectionObservable = array[section]
-                    sectionObservable.bindTo(sectionBond, fire: false)
+                    sectionObservable.bindTo(sectionBond, fire: false, file: file, line: line)
                     
-                    s.sectionBonds[section].unbind()
+                    s.sectionBonds[section].unbind(file: file, line: line)
                     s.sectionBonds[section] = sectionBond
                 }
                 
@@ -251,17 +251,17 @@ public class UITableViewDataSourceBond: ArrayBond<LazyObservableArray<UITableVie
         }
     }
     
-    public func bind(observable: LazyObservableArray<UITableViewCell>, fire: Bool = true) {
-        bind(ObservableArray([observable]), fire: fire)
+    public func bind(observable: LazyObservableArray<UITableViewCell>, fire: Bool = true, file: String = __FILE__, line: UInt = __LINE__) {
+        bind(ObservableArray([observable], file: file, line: line), fire: fire, file: file, line: line)
     }
     
-    public override func bind(observable: Observable<Array<LazyObservableArray<UITableViewCell>>>, fire: Bool, strongly: Bool) {
-        super.bind(observable, fire: fire, strongly: strongly)
+    public override func bind(observable: Observable<Array<LazyObservableArray<UITableViewCell>>>, fire: Bool, strongly: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        super.bind(observable, fire: fire, strongly: strongly, file: file, line: line)
         if let observable = observable as? ObservableArray<LazyObservableArray<UITableViewCell>> {
             for section in 0..<observable.count {
-                let sectionBond = UITableViewDataSourceSectionBond(tableView: self.tableView, section: section, disableAnimation: disableAnimation)
+                let sectionBond = UITableViewDataSourceSectionBond(tableView: self.tableView, section: section, disableAnimation: disableAnimation, file: file, line: line)
                 let sectionObservable = observable[section]
-                sectionObservable.bindTo(sectionBond, fire: fire)
+                sectionObservable.bindTo(sectionBond, fire: fire, file: file, line: line)
                 sectionBonds.append(sectionBond)
             }
             

@@ -39,34 +39,41 @@ public class BondBox<T> {
 // MARK: - Scalar Dynamic
 
 // MARK: Bond
-public class Bond<T> {
+public class Bond<T>: CustomDebugStringConvertible {
     public typealias Listener = T -> Void
+    
+    public let sourceLocation: SourceLocation
     
     public var listener: Listener?
     public var bound: Bool {
         return boundObservable != nil
     }
+    public var debugDescription: String {
+        return "\(self.dynamicType) from \(sourceLocation)"
+    }
     
     internal weak var boundObservable: Observable<T>?
     internal var retainedObservable: Observable<T>?
     
-    public init() {
+    public init(file: String = __FILE__, line: UInt = __LINE__) {
+        sourceLocation = SourceLocation(file: file, line: line)
     }
     
-    public init(_ listener: Listener) {
+    public init(file: String = __FILE__, line: UInt = __LINE__, _ listener: Listener) {
+        sourceLocation = SourceLocation(file: file, line: line)
         self.listener = listener
     }
     
-    public func bind(observable: Observable<T>) {
-        bind(observable, fire: true, strongly: true)
+    public func bind(observable: Observable<T>, file: String = __FILE__, line: UInt = __LINE__) {
+        bind(observable, fire: true, strongly: true, file: file, line: line)
     }
     
-    public func bind(observable: Observable<T>, fire: Bool) {
-        bind(observable, fire: fire, strongly: true)
+    public func bind(observable: Observable<T>, fire: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        bind(observable, fire: fire, strongly: true, file: file, line: line)
     }
     
-    public func bind(observable: Observable<T>, fire: Bool, strongly: Bool) {
-        unbind()
+    public func bind(observable: Observable<T>, fire: Bool, strongly: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        unbind(file: file, line: line)
         
         observable.bonds.insert(BondBox(self))
         
@@ -80,7 +87,7 @@ public class Bond<T> {
         }
     }
     
-    public func unbind(twoWayUnbindIntentional twoWayUnbindIntentional: Bool = false) {
+    public func unbind(twoWayUnbindIntentional twoWayUnbindIntentional: Bool = false, file: String = __FILE__, line: UInt = __LINE__) {
         let boxedSelf = BondBox(self)
         boundObservable?.bonds.remove(boxedSelf)
         
@@ -89,24 +96,29 @@ public class Bond<T> {
         boundObservable = nil
         retainedObservable = nil
         
-        if let boundDynamic = boundDynamic, let otherBoundDynamic = boundDynamic.valueBond.boundObservable as? Dynamic {
-            if otherBoundDynamic.valueBond == self {
-                if !twoWayUnbindIntentional {
-                    print("WARNING: A two-way binding was unbinded because of a new binding to bond \(self)")
-                }
-                boundDynamic.valueBond.unbind()
+        // If the boundObservable was a Dynamic and if it was bound to a dynamic where the bond was equal to `self`
+        if let
+            boundDynamic = boundDynamic,
+            otherBoundDynamic = boundDynamic.valueBond.boundObservable as? Dynamic where
+            otherBoundDynamic.valueBond === self
+        {
+            if !twoWayUnbindIntentional {
+                print("WARNING: A two-way binding between \n\t\(boundDynamic)\n\t\(otherBoundDynamic) was unbound unintentionally at \(file):\(line)!")
             }
+            boundDynamic.valueBond.unbind()
         }
     }
+    
     internal func fireListenerInternally(observable: Observable<T>) {
         listener?(observable.value)
     }
 }
 
-public class Observable<T> {
-    
+public class Observable<T>: CustomDebugStringConvertible {
     private var dispatchInProgress: Bool = false
     internal var bonds: Set<BondBox<T>> = Set()
+    
+    public let sourceLocation: SourceLocation
     
     public var backingValue: T?
     public var noEventValue: T {
@@ -114,7 +126,7 @@ public class Observable<T> {
             if let value = backingValue {
                 return value
             } else {
-                fatalError("Observable has no value defined at the moment!")
+                fatalError("\(self) has no value defined at the moment!")
             }
         }
         set {
@@ -143,12 +155,18 @@ public class Observable<T> {
         return bonds.count
     }
     
-    internal init() {
-        backingValue = nil
+    public var debugDescription: String {
+        return "\(self.dynamicType) from \(sourceLocation)"
     }
     
-    public init(_ value: T) {
+    internal init(file: String = __FILE__, line: UInt = __LINE__) {
+        backingValue = nil
+        sourceLocation = SourceLocation(file: file, line: line)
+    }
+    
+    public init(_ value: T, file: String = __FILE__, line: UInt = __LINE__) {
         backingValue = value
+        sourceLocation = SourceLocation(file: file, line: line)
     }
     
     internal func dispatch(value: T) {
@@ -175,16 +193,16 @@ public class Observable<T> {
         self.dispatchInProgress = false
     }
     
-    public func bindTo(bond: Bond<T>) {
-        bond.bind(self, fire: true, strongly: true)
+    public func bindTo(bond: Bond<T>, file: String = __FILE__, line: UInt = __LINE__) {
+        bond.bind(self, fire: true, strongly: true, file: file, line: line)
     }
     
-    public func bindTo(bond: Bond<T>, fire: Bool) {
-        bond.bind(self, fire: fire, strongly: true)
+    public func bindTo(bond: Bond<T>, fire: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        bond.bind(self, fire: fire, strongly: true, file: file, line: line)
     }
     
-    public func bindTo(bond: Bond<T>, fire: Bool, strongly: Bool) {
-        bond.bind(self, fire: fire, strongly: strongly)
+    public func bindTo(bond: Bond<T>, fire: Bool, strongly: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        bond.bind(self, fire: fire, strongly: strongly, file: file, line: line)
     }
     
 }
@@ -193,15 +211,17 @@ public class Observable<T> {
 
 public class Dynamic<T>: Observable<T> {
     
-    public let valueBond: Bond<T> = Bond()
+    public let valueBond: Bond<T>
     
-    private override init() {
-        super.init()
+    private override init(file: String = __FILE__, line: UInt = __LINE__) {
+        valueBond = Bond(file: file, line: line)
+        super.init(file: file, line: line)
         valueBond.listener = { [unowned self] in self.value = $0 }
     }
     
-    public override init(_ value: T) {
-        super.init(value)
+    public override init(_ value: T, file: String = __FILE__, line: UInt = __LINE__) {
+        valueBond = Bond(file: file, line: line)
+        super.init(value, file: file, line: line)
         valueBond.listener = { [unowned self] in self.value = $0 }
     }
     
@@ -209,24 +229,24 @@ public class Dynamic<T>: Observable<T> {
 
 public class InternalDynamic<T>: Dynamic<T> {
     
-    public override init() {
-        super.init()
+    public override init(file: String = __FILE__, line: UInt = __LINE__) {
+        super.init(file: file, line: line)
     }
     
-    public override init(_ value: T) {
-        super.init(value)
+    public override init(_ value: T, file: String = __FILE__, line: UInt = __LINE__) {
+        super.init(value, file: file, line: line)
     }
     
-    public init(listener: T -> ()) {
-        super.init()
-        let bond = Bond(listener)
+    public init(file: String = __FILE__, line: UInt = __LINE__, listener: T -> ()) {
+        super.init(file: file, line: line)
+        let bond = Bond(file: file, line: line, listener)
         bond.bind(self, fire: false, strongly: false)
         retain(bond)
     }
     
-    public init(_ value: T, fire: Bool = false, listener: T -> ()) {
-        super.init(value)
-        let bond = Bond(listener)
+    public init(_ value: T, fire: Bool = false, file: String = __FILE__, line: UInt = __LINE__, listener: T -> ()) {
+        super.init(value, file: file, line: line)
+        let bond = Bond(file: file, line: line, listener)
         bond.bind(self, fire: fire, strongly: false)
         retain(bond)
     }
@@ -240,24 +260,24 @@ public class InternalDynamic<T>: Dynamic<T> {
 
 public class InternalDynamicArray<T>: DynamicArray<T> {
     
-    public init() {
-        super.init([])
+    public init(file: String = __FILE__, line: UInt = __LINE__) {
+        super.init([], file: file, line: line)
     }
     
-    public override init(_ value: [T]) {
-        super.init(value)
+    public override init(_ value: [T], file: String = __FILE__, line: UInt = __LINE__) {
+        super.init(value, file: file, line: line)
     }
     
-    public init(listener: [T] -> ()) {
-        super.init([])
-        let bond = Bond(listener)
+    public init(file: String = __FILE__, line: UInt = __LINE__, listener: [T] -> ()) {
+        super.init([], file: file, line: line)
+        let bond = Bond(file: file, line: line, listener)
         bond.bind(self, fire: false, strongly: false)
         retain(bond)
     }
     
-    public init(_ value: [T], fire: Bool = false, listener: [T] -> ()) {
+    public init(_ value: [T], fire: Bool = false, file: String = __FILE__, line: UInt = __LINE__, listener: [T] -> ()) {
         super.init(value)
-        let bond = Bond(listener)
+        let bond = Bond(file: file, line: line, listener)
         bond.bind(self, fire: fire, strongly: false)
         retain(bond)
     }
@@ -295,70 +315,70 @@ extension Dynamic: Bondable {
 
 public extension Observable
 {
-    public func map<U>(f: T -> U) -> Observable<U> {
-        return _map(self, f)
+    public func map<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: T -> U) -> Observable<U> {
+        return _map(self, file: file, line: line, f)
     }
     
-    public func flatMap<U>(f: T -> Observable<U>?) -> Observable<U?> {
-        return _flatMap(self, f)
+    public func flatMap<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: T -> Observable<U>?) -> Observable<U?> {
+        return _flatMap(self, file: file, line: line, f)
     }
     
-    public func flatMap<U>(f: T -> Observable<U>) -> Observable<U> {
-        return _flatMap(self, f)
+    public func flatMap<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: T -> Observable<U>) -> Observable<U> {
+        return _flatMap(self, file: file, line: line, f)
     }
     
-    public func flatMap<U>(f: T -> ObservableArray<U>?) -> ObservableArray<U> {
-        return _flatMap(self, f)
+    public func flatMap<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: T -> ObservableArray<U>?) -> ObservableArray<U> {
+        return _flatMap(self, file: file, line: line, f)
     }
     
-    public func flatMap<U>(f: T -> ObservableArray<U>) -> ObservableArray<U> {
-        return _flatMap(self, f)
+    public func flatMap<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: T -> ObservableArray<U>) -> ObservableArray<U> {
+        return _flatMap(self, file: file, line: line, f)
     }
     
-    public func flatMapTwoWay<U>(f: T -> Dynamic<U>) -> Dynamic<U> {
-        return _flatMapTwoWay(self, f)
+    public func flatMapTwoWay<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: T -> Dynamic<U>) -> Dynamic<U> {
+        return _flatMapTwoWay(self, file: file, line: line, f)
     }
     
-    public func asyncMap<U>(f: (T, U -> ()) -> ()) -> Observable<U> {
-        return _asyncMap(self, f)
+    public func asyncMap<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: (T, U -> ()) -> ()) -> Observable<U> {
+        return _asyncMap(self, file: file, line: line, f)
     }
     
-    public func asyncMap<U>(f: (T, [U] -> ()) -> ()) -> ObservableArray<U> {
-        return _asyncMap(self, f)
+    public func asyncMap<U>(file file: String = __FILE__, line: UInt = __LINE__, _ f: (T, [U] -> ()) -> ()) -> ObservableArray<U> {
+        return _asyncMap(self, file: file, line: line, f)
     }
     
-    public func filter(f: T -> Bool) -> Observable<T> {
-        return _filter(self, f)
+    public func filter(file file: String = __FILE__, line: UInt = __LINE__, _ f: T -> Bool) -> Observable<T> {
+        return _filter(self, file: file, line: line, f)
     }
     
-    public func filter(f: (T, T) -> Bool, _ v: T) -> Observable<T> {
-        return _filter(self) { f($0, v) }
+    public func filter(file file: String = __FILE__, line: UInt = __LINE__, _ f: (T, T) -> Bool, _ v: T) -> Observable<T> {
+        return _filter(self, file: file, line: line) { f($0, v) }
     }
     
-    public func rewrite<U>(v:  U) -> Observable<U> {
-        return _map(self) { _ in return v}
+    public func rewrite<U>(v:  U, file: String = __FILE__, line: UInt = __LINE__) -> Observable<U> {
+        return _map(self, file: file, line: line) { _ in return v}
     }
     
-    public func zip<U>(v: U) -> Observable<(T, U)> {
-        return _map(self) { ($0, v) }
+    public func zip<U>(v: U, file: String = __FILE__, line: UInt = __LINE__) -> Observable<(T, U)> {
+        return _map(self, file: file, line: line) { ($0, v) }
     }
     
-    public func zip<U>(d: Observable<U>) -> Observable<(T, U)> {
-        return reduce(self, d) { ($0, $1) }
+    public func zip<U>(d: Observable<U>, file: String = __FILE__, line: UInt = __LINE__) -> Observable<(T, U)> {
+        return reduce(self, d, file: file, line: line) { ($0, $1) }
     }
     
-    public func skip(count: Int) -> Observable<T> {
-        return _skip(self, count)
+    public func skip(count: Int, file: String = __FILE__, line: UInt = __LINE__) -> Observable<T> {
+        return _skip(self, count, file: file, line: line)
     }
     
-    public func throttle(seconds: Double, queue: dispatch_queue_t = dispatch_get_main_queue()) -> Observable<T> {
-        return _throttle(self, seconds, queue)
+    public func throttle(seconds: Double, queue: dispatch_queue_t = dispatch_get_main_queue(), file: String = __FILE__, line: UInt = __LINE__) -> Observable<T> {
+        return _throttle(self, seconds, queue, file: file, line: line)
     }
 }
 
 public extension Observable where T: Equatable {
-    public func distinct() -> Observable<T> {
-        return _distinct(self)
+    public func distinct(file file: String = __FILE__, line: UInt = __LINE__) -> Observable<T> {
+        return _distinct(self, file: file, line: line)
     }
 }
 
@@ -382,14 +402,16 @@ public func ==<T>(left: BondBox<T>, right: BondBox<T>) -> Bool {
 
 internal class AsyncMapProxyObservable<IN, OUT>: Observable<OUT>, Bondable {
     
-    internal let inputBond: Bond<IN> = .init()
+    internal let inputBond: Bond<IN>
     
     internal var designatedBond: Bond<IN> {
         return self.inputBond
     }
     
-    internal init(_ action: (IN, (OUT) -> ()) -> ()) {
-        super.init()
+    internal init(file: String = __FILE__, line: UInt = __LINE__, _ action: (IN, (OUT) -> ()) -> ()) {
+        inputBond = Bond(file: file, line: line)
+
+        super.init(file: file, line: line)
         
         inputBond.listener = { [unowned self] in
             action($0, self.setOutputValue)
@@ -403,14 +425,16 @@ internal class AsyncMapProxyObservable<IN, OUT>: Observable<OUT>, Bondable {
 
 internal class AsyncMapProxyObservableArray<IN, OUT>: ObservableArray<OUT>, Bondable {
     
-    internal let inputBond: Bond<IN> = .init()
+    internal let inputBond: Bond<IN>
     
     internal var designatedBond: Bond<IN> {
         return self.inputBond
     }
     
-    internal init(_ action: (IN, [OUT] -> ()) -> ()) {
-        super.init([])
+    internal init(file: String = __FILE__, line: UInt = __LINE__, _ action: (IN, [OUT] -> ()) -> ()) {
+        inputBond = Bond(file: file, line: line)
+
+        super.init([], file: file, line: line)
         
         inputBond.listener = { [unowned self] in
             action($0, self.setOutputValue)

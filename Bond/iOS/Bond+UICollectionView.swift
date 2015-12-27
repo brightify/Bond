@@ -44,10 +44,10 @@ private class UICollectionViewDataSourceSectionBond: ArrayBond<() -> UICollectio
     weak var collectionView: UICollectionView?
     var section: Int
     
-    init(collectionView: UICollectionView?, section: Int) {
+    init(collectionView: UICollectionView?, section: Int, file: String = __FILE__, line: UInt = __LINE__) {
         self.collectionView = collectionView
         self.section = section
-        super.init()
+        super.init(file: file, line: line)
         
         self.didInsertListener = { [unowned self] a, i in
             if let collectionView = self.collectionView {
@@ -90,9 +90,9 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
         }
     }
     
-    public init(collectionView: UICollectionView) {
+    public init(collectionView: UICollectionView, file: String = __FILE__, line: UInt = __LINE__) {
         self.collectionView = collectionView
-        super.init()
+        super.init(file: file, line: line)
         
         self.didInsertListener = { [weak self] array, range in
             guard let s = self, let collectionView = s.collectionView else { return }
@@ -100,9 +100,9 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
             collectionView.insertSections(NSIndexSet(array: Array(range)))
             
             for section in range {
-                let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: collectionView, section: section)
+                let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: collectionView, section: section, file: file, line: line)
                 let sectionDynamic = array[section]
-                sectionDynamic.bindTo(sectionBond, fire: false)
+                sectionDynamic.bindTo(sectionBond, fire: false, file: file, line: line)
                 s.sectionBonds.insert(sectionBond, atIndex: section)
                 
                 for var idx = section + 1; idx < s.sectionBonds.count; idx++ {
@@ -117,7 +117,7 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
             collectionView.deleteSections(NSIndexSet(array: Array(range)))
             
             for section in range.sort(>) {
-                s.sectionBonds[section].unbind()
+                s.sectionBonds[section].unbind(file: file, line: line)
                 s.sectionBonds.removeAtIndex(section)
                 
                 for var idx = section; idx < s.sectionBonds.count; idx++ {
@@ -132,11 +132,11 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
             collectionView.reloadSections(NSIndexSet(array: Array(range)))
             
             for section in range {
-                let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: collectionView, section: section)
+                let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: collectionView, section: section, file: file, line: line)
                 let sectionDynamic = array[section]
                 sectionDynamic.bindTo(sectionBond, fire: false)
                 
-                s.sectionBonds[section].unbind()
+                s.sectionBonds[section].unbind(file: file, line: line)
                 s.sectionBonds[section] = sectionBond
             }
             
@@ -149,17 +149,17 @@ public class UICollectionViewDataSourceBond: ArrayBond<LazyObservableArray<UICol
         }
     }
     
-    public func bind(dynamic: LazyObservableArray<UICollectionViewCell>, fire: Bool = true) {
-        bind(ObservableArray([dynamic]), fire: fire)
+    public func bind(dynamic: LazyObservableArray<UICollectionViewCell>, fire: Bool = true, file: String = __FILE__, line: UInt = __LINE__) {
+        bind(ObservableArray([dynamic], file: file, line: line), fire: fire, file: file, line: line)
     }
     
-    public override func bind(dynamic: Observable<Array<LazyObservableArray<UICollectionViewCell>>>, fire: Bool, strongly: Bool) {
-        super.bind(dynamic, fire: fire, strongly: strongly)
+    public override func bind(dynamic: Observable<Array<LazyObservableArray<UICollectionViewCell>>>, fire: Bool, strongly: Bool, file: String = __FILE__, line: UInt = __LINE__) {
+        super.bind(dynamic, fire: fire, strongly: strongly, file: file, line: line)
         if let dynamic = dynamic as? ObservableArray<LazyObservableArray<UICollectionViewCell>> {
             for section in 0..<dynamic.count {
-                let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: self.collectionView, section: section)
+                let sectionBond = UICollectionViewDataSourceSectionBond(collectionView: self.collectionView, section: section, file: file, line: line)
                 let sectionDynamic = dynamic[section]
-                sectionDynamic.bindTo(sectionBond, fire: false)
+                sectionDynamic.bindTo(sectionBond, fire: false, file: file, line: line)
                 sectionBonds.append(sectionBond)
             }
             
