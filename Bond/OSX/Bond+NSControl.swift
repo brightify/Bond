@@ -39,9 +39,8 @@ class ControlDynamic<T, U: ControlDynamicHelper where U.T == T>: Dynamic<T> {
     init(helper: U) {
         self.helper = helper
         super.init(helper.value)
-        self.helper.listener = {
-            [unowned self] in
-            self.value = $0
+        self.helper.listener = { [weak self] in
+            self?.value = $0
         }
     }
 

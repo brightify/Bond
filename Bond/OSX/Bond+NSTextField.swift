@@ -49,10 +49,11 @@ class TextFieldDynamic<T>: InternalDynamic<String> {
     init(control: NSTextField) {
         self.helper = TextFieldDynamicHelper(control: control)
         super.init(control.stringValue ?? "")
-        self.helper.listener =  { [unowned self] in
-          self.updatingFromSelf = true
-          self.value = $0
-          self.updatingFromSelf = false
+        self.helper.listener =  { [weak self] in
+          guard let s = self else { return }
+          s.updatingFromSelf = true
+          s.value = $0
+          s.updatingFromSelf = false
       }
     }
 

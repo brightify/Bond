@@ -69,8 +69,8 @@ class ButtonDynamic<T>: InternalDynamic<UIControlEvents>
   init(control: UIButton) {
     self.helper = ButtonDynamicHelper(control: control)
     super.init()
-    self.helper.listener =  { [unowned self] in
-      self.value = $0
+    self.helper.listener =  { [weak self] in
+      self?.value = $0
     }
   }
 }

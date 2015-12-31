@@ -49,28 +49,29 @@ private class UICollectionViewDataSourceSectionBond: ArrayBond<() -> UICollectio
         self.section = section
         super.init()
         
-        self.didInsertListener = { [unowned self] a, i in
-            if let collectionView = self.collectionView {
-                collectionView.insertItemsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: self.section) })
+        self.didInsertListener = { [weak self] a, i in
+            guard let s = self else { return }
+            if let collectionView = s.collectionView {
+                collectionView.insertItemsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: s.section) })
             }
         }
         
-        self.didRemoveListener = { [unowned self] a, i in
-            if let collectionView = self.collectionView {
-                collectionView.deleteItemsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: self.section) })
+        self.didRemoveListener = { [weak self] a, i in
+            guard let s = self else { return }
+            if let collectionView = s.collectionView {
+                collectionView.deleteItemsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: s.section) })
             }
         }
         
-        self.didUpdateListener = { [unowned self] a, i in
-            if let collectionView = self.collectionView {
-                collectionView.reloadItemsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: self.section) })
+        self.didUpdateListener = { [weak self] a, i in
+            guard let s = self else { return }
+            if let collectionView = s.collectionView {
+                collectionView.reloadItemsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: s.section) })
             }
         }
         
         self.didResetListener = { [weak self] array in
-            if let collectionView = self?.collectionView {
-                collectionView.reloadData()
-            }
+            self?.collectionView?.reloadData()
         }
     }
     

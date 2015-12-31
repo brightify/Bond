@@ -286,41 +286,50 @@ public class DynamicArray<T>: MutableObservableArray<T>, Bondable {
     
     public override init(_ array: Array<T>) {
         super.init(array)
-        arrayBond.listener = { [unowned self] in
-            self.noEventValue = $0
-            self.dispatch($0)
+        arrayBond.listener = { [weak self] in
+            guard let s = self else { return }
+            s.noEventValue = $0
+            s.dispatch($0)
         }
         
-        arrayBond.willInsertListener = { [unowned self] array, range in
-            self.dispatchWillInsert(self.noEventValue, range)
+        arrayBond.willInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillInsert(s.noEventValue, range)
         }
         
-        arrayBond.didInsertListener = { [unowned self] array, range in
-            self.dispatchDidInsert(self.noEventValue, range)
+        arrayBond.didInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidInsert(s.noEventValue, range)
         }
         
-        arrayBond.willRemoveListener = { [unowned self] array, range in
-            self.dispatchWillRemove(self.noEventValue, range)
+        arrayBond.willRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillRemove(s.noEventValue, range)
         }
         
-        arrayBond.didRemoveListener = { [unowned self] array, range in
-            self.dispatchDidRemove(self.noEventValue, range)
+        arrayBond.didRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidRemove(s.noEventValue, range)
         }
         
-        arrayBond.willUpdateListener = { [unowned self] array, range in
-            self.dispatchWillUpdate(self.noEventValue, range)
+        arrayBond.willUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillUpdate(s.noEventValue, range)
         }
         
-        arrayBond.didUpdateListener = { [unowned self] array, range in
-            self.dispatchDidUpdate(self.noEventValue, range)
+        arrayBond.didUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidUpdate(s.noEventValue, range)
         }
         
-        arrayBond.willResetListener = { [unowned self] array in
-            self.dispatchWillReset(self.noEventValue)
+        arrayBond.willResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchWillReset(s.noEventValue)
         }
         
-        arrayBond.didResetListener = { [unowned self] array in
-            self.dispatchDidReset(self.noEventValue)
+        arrayBond.didResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchDidReset(s.noEventValue)
         }
     }
 }
@@ -358,41 +367,50 @@ private class LazyObservableArrayMapProxy<T, U>: LazyObservableArray<U> {
         
         super.init(lazyArray)
         
-        bond.listener = { [unowned self] array in
-            self.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
-            self.dispatch(self.noEventValue)
+        bond.listener = { [weak self] array in
+            guard let s = self else { return }
+            s.noEventValue = LazyObservableArrayMapProxy.createArray(array, mapf)
+            s.dispatch(s.noEventValue)
         }
         
-        bond.willInsertListener = { [unowned self] array, range in
-            self.dispatchWillInsert(self.noEventValue, range)
+        bond.willInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillInsert(s.noEventValue, range)
         }
         
-        bond.didInsertListener = { [unowned self] array, range in
-            self.dispatchDidInsert(self.noEventValue, range)
+        bond.didInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidInsert(s.noEventValue, range)
         }
         
-        bond.willRemoveListener = { [unowned self] array, range in
-            self.dispatchWillRemove(self.noEventValue, range)
+        bond.willRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillRemove(s.noEventValue, range)
         }
         
-        bond.didRemoveListener = { [unowned self] array, range in
-            self.dispatchDidRemove(self.noEventValue, range)
+        bond.didRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidRemove(s.noEventValue, range)
         }
         
-        bond.willUpdateListener = { [unowned self] array, range in
-            self.dispatchWillUpdate(self.noEventValue, range)
+        bond.willUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillUpdate(s.noEventValue, range)
         }
         
-        bond.didUpdateListener = { [unowned self] array, range in
-            self.dispatchDidUpdate(self.noEventValue, range)
+        bond.didUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidUpdate(s.noEventValue, range)
         }
         
-        bond.willResetListener = { [unowned self] array in
-            self.dispatchWillReset(self.noEventValue)
+        bond.willResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchWillReset(s.noEventValue)
         }
         
-        bond.didResetListener = { [unowned self] array in
-            self.dispatchDidReset(self.noEventValue)
+        bond.didResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchDidReset(s.noEventValue)
         }
     }
     
@@ -421,23 +439,27 @@ private class FlatMapContainer<T> {
         self.count = target.count
         bond.bind(target, fire: false)
         
-        bond.didInsertListener = { [unowned self, unowned parent] array, range in
-            parent.insertContentsOf(array[range], at: self.absoluteIndex(range.startIndex))
-            self.count = array.count
+        bond.didInsertListener = { [weak self, weak parent] array, range in
+            guard let s = self, parent = parent else { return }
+            parent.insertContentsOf(array[range], at: s.absoluteIndex(range.startIndex))
+            s.count = array.count
         }
         
-        bond.didRemoveListener = { [unowned self, unowned parent] array, range in
-            parent.removeRange(self.absoluteRange(range))
-            self.count = array.count
+        bond.didRemoveListener = { [weak self, weak parent] array, range in
+            guard let s = self, parent = parent else { return }
+            parent.removeRange(s.absoluteRange(range))
+            s.count = array.count
         }
         
-        bond.didUpdateListener = { [unowned self, unowned parent] array, range in
-            parent.replaceRange(self.absoluteRange(range), with: array[range])
+        bond.didUpdateListener = { [weak self, weak parent] array, range in
+            guard let s = self, parent = parent else { return }
+            parent.replaceRange(s.absoluteRange(range), with: array[range])
         }
         
-        bond.didResetListener = { [unowned self, unowned parent] array in
-            parent.replaceRange(self.range, with: array)
-            self.count = array.count
+        bond.didResetListener = { [weak self, weak parent] array in
+            guard let s = self, parent = parent else { return }
+            parent.replaceRange(s.range, with: array)
+            s.count = array.count
         }
     }
     
@@ -469,43 +491,52 @@ private class ObservableArrayFlatMapProxy<T, U>: MutableObservableArray<U> {
         noEventValue = sourceArray.value.enumerate().map(mapf)
             .reduce([], combine: ObservableArrayFlatMapProxy.bindSubarrays(&lastSubarrayLink, parent: self))
         
-        bond.listener = { [unowned self] array in
-            self.lastSubarrayLink = nil
-            self.noEventValue = sourceArray.value.enumerate().map(mapf)
-                .reduce([], combine: ObservableArrayFlatMapProxy.bindSubarrays(&self.lastSubarrayLink, parent: self))
-            self.dispatch(self.noEventValue)
+        bond.listener = { [weak self] array in
+            guard let s = self else { return }
+            s.lastSubarrayLink = nil
+            s.noEventValue = sourceArray.value.enumerate().map(mapf)
+                .reduce([], combine: ObservableArrayFlatMapProxy.bindSubarrays(&s.lastSubarrayLink, parent: s))
+            s.dispatch(s.noEventValue)
         }
         
-        bond.willInsertListener = { [unowned self] array, range in
-            self.dispatchWillInsert(self.noEventValue, range)
+        bond.willInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillInsert(s.noEventValue, range)
         }
         
-        bond.didInsertListener = { [unowned self] array, range in
-            self.dispatchDidInsert(self.noEventValue, range)
+        bond.didInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidInsert(s.noEventValue, range)
         }
         
-        bond.willRemoveListener = { [unowned self] array, range in
-            self.dispatchWillRemove(self.noEventValue, range)
+        bond.willRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillRemove(s.noEventValue, range)
         }
         
-        bond.didRemoveListener = { [unowned self] array, range in
-            self.dispatchDidRemove(self.noEventValue, range)
+        bond.didRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidRemove(s.noEventValue, range)
         }
         
-        bond.willUpdateListener = { [unowned self] array, range in
-            self.dispatchWillUpdate(self.noEventValue, range)
+        bond.willUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillUpdate(s.noEventValue, range)
         }
         
-        bond.didUpdateListener = { [unowned self] array, range in
-            self.dispatchDidUpdate(self.noEventValue, range)
+        bond.didUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidUpdate(s.noEventValue, range)
         }
         
-        bond.willResetListener = { [unowned self] array in
-            self.dispatchWillReset(self.noEventValue)
+        bond.willResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchWillReset(s.noEventValue)
         }
         
-        bond.didResetListener = { [unowned self] array in
-            self.dispatchDidReset(self.noEventValue)
+        bond.didResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchDidReset(s.noEventValue)
         }
     }
     
@@ -527,43 +558,52 @@ private class ObservableArrayValueFlatMapProxy<T, U>: MutableObservableArray<U> 
         noEventValue = sourceArray.value.enumerate().map(mapf).enumerate()
             .map(ObservableArrayValueFlatMapProxy.bindValues(&valueBonds, parent: self))
         
-        bond.listener = { [unowned self] array in
-            self.valueBonds = []
-            self.noEventValue = sourceArray.value.enumerate().map(mapf).enumerate()
-                .map(ObservableArrayValueFlatMapProxy.bindValues(&self.valueBonds, parent: self))
-            self.dispatch(self.noEventValue)
+        bond.listener = { [weak self] array in
+            guard let s = self else { return }
+            s.valueBonds = []
+            s.noEventValue = sourceArray.value.enumerate().map(mapf).enumerate()
+                .map(ObservableArrayValueFlatMapProxy.bindValues(&s.valueBonds, parent: s))
+            s.dispatch(s.noEventValue)
         }
         
-        bond.willInsertListener = { [unowned self] array, range in
-            self.dispatchWillInsert(self.noEventValue, range)
+        bond.willInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillInsert(s.noEventValue, range)
         }
         
-        bond.didInsertListener = { [unowned self] array, range in
-            self.dispatchDidInsert(self.noEventValue, range)
+        bond.didInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidInsert(s.noEventValue, range)
         }
         
-        bond.willRemoveListener = { [unowned self] array, range in
-            self.dispatchWillRemove(self.noEventValue, range)
+        bond.willRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillRemove(s.noEventValue, range)
         }
         
-        bond.didRemoveListener = { [unowned self] array, range in
-            self.dispatchDidRemove(self.noEventValue, range)
+        bond.didRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidRemove(s.noEventValue, range)
         }
         
-        bond.willUpdateListener = { [unowned self] array, range in
-            self.dispatchWillUpdate(self.noEventValue, range)
+        bond.willUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillUpdate(s.noEventValue, range)
         }
         
-        bond.didUpdateListener = { [unowned self] array, range in
-            self.dispatchDidUpdate(self.noEventValue, range)
+        bond.didUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidUpdate(s.noEventValue, range)
         }
         
-        bond.willResetListener = { [unowned self] array in
-            self.dispatchWillReset(self.noEventValue)
+        bond.willResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchWillReset(s.noEventValue)
         }
         
-        bond.didResetListener = { [unowned self] array in
-            self.dispatchDidReset(self.noEventValue)
+        bond.didResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchDidReset(s.noEventValue)
         }
     }
     
@@ -587,41 +627,50 @@ private class ObservableArrayMapProxy<T, U>: ObservableArray<U> {
         let array = sourceArray.value.enumerate().map(mapf)
         super.init(array)
         
-        bond.listener = { [unowned self] array in
-            self.noEventValue = array.enumerate().map(mapf)
-            self.dispatch(self.noEventValue)
+        bond.listener = { [weak self] array in
+            guard let s = self else { return }
+            s.noEventValue = array.enumerate().map(mapf)
+            s.dispatch(s.noEventValue)
         }
         
-        bond.willInsertListener = { [unowned self] array, range in
-            self.dispatchWillInsert(self.noEventValue, range)
+        bond.willInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillInsert(s.noEventValue, range)
         }
         
-        bond.didInsertListener = { [unowned self] array, range in
-            self.dispatchDidInsert(self.noEventValue, range)
+        bond.didInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidInsert(s.noEventValue, range)
         }
         
-        bond.willRemoveListener = { [unowned self] array, range in
-            self.dispatchWillRemove(self.noEventValue, range)
+        bond.willRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillRemove(s.noEventValue, range)
         }
         
-        bond.didRemoveListener = { [unowned self] array, range in
-            self.dispatchDidRemove(self.noEventValue, range)
+        bond.didRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidRemove(s.noEventValue, range)
         }
         
-        bond.willUpdateListener = { [unowned self] array, range in
-            self.dispatchWillUpdate(self.noEventValue, range)
+        bond.willUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchWillUpdate(s.noEventValue, range)
         }
         
-        bond.didUpdateListener = { [unowned self] array, range in
-            self.dispatchDidUpdate(self.noEventValue, range)
+        bond.didUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
+            s.dispatchDidUpdate(s.noEventValue, range)
         }
         
-        bond.willResetListener = { [unowned self] array in
-            self.dispatchWillReset(self.noEventValue)
+        bond.willResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchWillReset(s.noEventValue)
         }
         
-        bond.didResetListener = { [unowned self] array in
-            self.dispatchDidReset(self.noEventValue)
+        bond.didResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchDidReset(s.noEventValue)
         }
     }
     
@@ -668,46 +717,48 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
         
         super.init(array)
         
-        bond.didInsertListener = { [unowned self] array, range in
+        bond.didInsertListener = { [weak self] array, range in
+            guard let s = self else { return }
             var pointers: [Int] = []
-            let filtered = self.dynamicType.filteredArray(array[range], withPointers: &pointers, filterUsing: filterf)
+            let filtered = s.dynamicType.filteredArray(array[range], withPointers: &pointers, filterUsing: filterf)
             guard let firstPointer = pointers.first else { return }
             
-            let startIndex = self.pointers.indexOfFirstEqualOrLargerThan(firstPointer)
+            let startIndex = s.pointers.indexOfFirstEqualOrLargerThan(firstPointer)
             let insertedRange = startIndex ..< startIndex.advancedBy(filtered.count)
 
-            self.dispatchWillInsert(self.noEventValue, insertedRange)
+            s.dispatchWillInsert(s.noEventValue, insertedRange)
             
-            self.noEventValue.insertContentsOf(filtered, at: startIndex)
-            self.pointers.insertContentsOf(pointers, at: startIndex)
+            s.noEventValue.insertContentsOf(filtered, at: startIndex)
+            s.pointers.insertContentsOf(pointers, at: startIndex)
             
-            self.dispatchDidInsert(self.noEventValue, insertedRange)
+            s.dispatchDidInsert(s.noEventValue, insertedRange)
         }
         
-        bond.willRemoveListener = { [unowned self] array, range in
+        bond.willRemoveListener = { [weak self] array, range in
+            guard let s = self else { return }
             var pointers: [Int] = []
-            let filtered = self.dynamicType.filteredArray(array[range], withPointers: &pointers, filterUsing: filterf)
-            guard let firstPointer = pointers.first, let startIndex = self.pointers.indexOf(firstPointer) else { return }
+            let filtered = s.dynamicType.filteredArray(array[range], withPointers: &pointers, filterUsing: filterf)
+            guard let firstPointer = pointers.first, let startIndex = s.pointers.indexOf(firstPointer) else { return }
             
             let removedRange = startIndex ..< startIndex.advancedBy(filtered.count)
             
-            self.dispatchWillRemove(self.noEventValue, removedRange)
+            s.dispatchWillRemove(s.noEventValue, removedRange)
             
-            self.noEventValue.removeRange(removedRange)
-            self.pointers.removeRange(removedRange)
+            s.noEventValue.removeRange(removedRange)
+            s.pointers.removeRange(removedRange)
             
-            self.dispatchDidRemove(self.noEventValue, removedRange)
+            s.dispatchDidRemove(s.noEventValue, removedRange)
         }
         
-        bond.didUpdateListener = { [unowned self] array, range in
-            
+        bond.didUpdateListener = { [weak self] array, range in
+            guard let s = self else { return }
             //let idx = range.startIndex
             //let element = array[idx]
             
             var insertedIndices: [Int] = []
             var removedIndices: [Int] = []
             var updatedIndices: [Int] = []
-            let pointers = self.pointers
+            let pointers = s.pointers
             
             for i in range {
                 let keep = filterf(array[i])
@@ -724,82 +775,39 @@ private class ObservableArrayFilterProxy<T>: ObservableArray<T> {
             
             insertedIndices.map { (pointers.indexOfFirstEqualOrLargerThan($0 - 1), $0) }.forEach {
                 let insertedRange = $0...$0
-                self.dispatchWillInsert(self.noEventValue, insertedRange)
-                self.noEventValue.insert(array[$1], atIndex: $0)
-                self.pointers.insert($1, atIndex: $0)
-                self.dispatchDidInsert(self.noEventValue, insertedRange)
+                s.dispatchWillInsert(s.noEventValue, insertedRange)
+                s.noEventValue.insert(array[$1], atIndex: $0)
+                s.pointers.insert($1, atIndex: $0)
+                s.dispatchDidInsert(s.noEventValue, insertedRange)
             }
             
             removedIndices.map(pointers.indexOf).forEach {
                 guard let localIndex = $0 else { return }
                 let removedRange = localIndex...localIndex
-                self.dispatchWillRemove(self.noEventValue, removedRange)
-                self.noEventValue.removeAtIndex(localIndex)
-                self.pointers.removeAtIndex(localIndex)
-                self.dispatchDidRemove(self.noEventValue, removedRange)
+                s.dispatchWillRemove(s.noEventValue, removedRange)
+                s.noEventValue.removeAtIndex(localIndex)
+                s.pointers.removeAtIndex(localIndex)
+                s.dispatchDidRemove(s.noEventValue, removedRange)
             }
             
             updatedIndices.map { (pointers.indexOf($0), $0) }.forEach {
                 guard let localIndex = $0 else { return }
                 let updatedRange = localIndex...localIndex
-                self.dispatchWillUpdate(self.noEventValue, updatedRange)
-                self.noEventValue[localIndex] = array[$1]
-                self.dispatchDidUpdate(self.noEventValue, updatedRange)
+                s.dispatchWillUpdate(s.noEventValue, updatedRange)
+                s.noEventValue[localIndex] = array[$1]
+                s.dispatchDidUpdate(s.noEventValue, updatedRange)
             }
-            
-//            if let idx = pointers.indexOf(idx) {
-//                if filterf(element) {
-//                    // update
-//                    updatedIndices.append(idx)
-//                } else {
-//                    // remove
-//                    pointers.removeAtIndex(idx)
-//                    removedIndices.append(idx)
-//                }
-//            } else {
-//                if filterf(element) {
-//                    let position = pointers.indexOfFirstEqualOrLargerThan(idx)
-//                    pointers.insert(idx, atIndex: position)
-//                    insertedIndices.append(position)
-//                } else {
-//                    // nothing
-//                }
-//            }
-//            
-//            if insertedIndices.count > 0 {
-//                self.dispatchWillInsert(insertedIndices)
-//            }
-//            
-//            if removedIndices.count > 0 {
-//                self.dispatchWillRemove(removedIndices)
-//            }
-//            
-//            if updatedIndices.count > 0 {
-//                self.dispatchWillUpdate(updatedIndices)
-//            }
-//            
-//            self.pointers = pointers
-//            
-//            if updatedIndices.count > 0 {
-//                self.dispatchDidUpdate(updatedIndices)
-//            }
-//            
-//            if removedIndices.count > 0 {
-//                self.dispatchDidRemove(removedIndices)
-//            }
-//            
-//            if insertedIndices.count > 0 {
-//                self.dispatchDidInsert(insertedIndices)
-//            }
         }
         
-        bond.willResetListener = { [unowned self] array in
-            self.dispatchWillReset(self.noEventValue)
+        bond.willResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.dispatchWillReset(s.noEventValue)
         }
         
-        bond.didResetListener = { [unowned self] array in
-            self.noEventValue = self.dynamicType.filteredArray(array, withPointers: &self.pointers, filterUsing: filterf)
-            self.dispatchDidReset(self.noEventValue)
+        bond.didResetListener = { [weak self] array in
+            guard let s = self else { return }
+            s.noEventValue = s.dynamicType.filteredArray(array, withPointers: &s.pointers, filterUsing: filterf)
+            s.dispatchDidReset(s.noEventValue)
         }
     }
     
@@ -887,49 +895,49 @@ private class ObservableArrayDeliverOnProxy<T>: ObservableArray<T> {
         self.bond.bind(sourceArray, fire: false)
         super.init([])
         
-        bond.willInsertListener = { [unowned self] array, range in
+        bond.willInsertListener = { [weak self] array, range in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchWillInsert(array, range)
             }
         }
         
-        bond.didInsertListener = { [unowned self] array, range in
+        bond.didInsertListener = { [weak self] array, range in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchDidInsert(array, range)
             }
         }
         
-        bond.willRemoveListener = { [unowned self] array, range in
+        bond.willRemoveListener = { [weak self] array, range in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchWillRemove(array, range)
             }
         }
         
-        bond.didRemoveListener = { [unowned self] array, range in
+        bond.didRemoveListener = { [weak self] array, range in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchDidRemove(array, range)
             }
         }
         
-        bond.willUpdateListener = { [unowned self] array, range in
+        bond.willUpdateListener = { [weak self] array, range in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchWillUpdate(array, range)
             }
         }
         
-        bond.didUpdateListener = { [unowned self] array, range in
+        bond.didUpdateListener = { [weak self] array, range in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchDidUpdate(array, range)
             }
         }
         
-        bond.willResetListener = { [unowned self] array in
+        bond.willResetListener = { [weak self] array in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchWillReset(array)
             }
         }
         
-        bond.didResetListener = { [unowned self] array in
+        bond.didResetListener = { [weak self] array in
             dispatch_async(queue) { [weak self] in
                 self?.dispatchDidReset(array)
             }

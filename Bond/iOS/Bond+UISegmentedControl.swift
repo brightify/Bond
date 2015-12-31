@@ -54,8 +54,8 @@ class SegmentedControlDynamic<T>: InternalDynamic<UIControlEvents>
   init(control: UISegmentedControl) {
     self.helper = SegmentedControlDynamicHelper(control: control)
     super.init()
-    self.helper.listener =  { [unowned self] in
-      self.value = $0
+    self.helper.listener =  { [weak self] in
+      self?.value = $0
     }
   }
 }
@@ -66,11 +66,12 @@ class SegmentedControlSelectedIndexDynamic<T>: InternalDynamic<Int> {
   init(control: UISegmentedControl, initialValue: Int) {
     helper = SegmentedControlDynamicHelper(control: control)
     super.init(initialValue)
-    // We need to use `weak control` because `unowned causes a crash when capturing the `control` instance
-    helper.listener = { [unowned self, weak control] _ in
-      self.updatingFromSelf = true
-      self.value = control!.selectedSegmentIndex
-      self.updatingFromSelf = false
+    // We need to use `weak control` because `unowned` causes a crash when capturing the `control` instance
+    helper.listener = { [weak self, weak control] _ in
+      guard let s = self else { return }
+      s.updatingFromSelf = true
+      s.value = control!.selectedSegmentIndex
+      s.updatingFromSelf = false
     }
   }
 }

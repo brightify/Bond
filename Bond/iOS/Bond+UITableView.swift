@@ -125,40 +125,41 @@ private class UITableViewDataSourceSectionBond: ArrayBond<() -> UITableViewCell>
         self.section = section
         super.init()
         
-        self.didInsertListener = { [unowned self] a, i in
-            if let tableView: UITableView = self.tableView {
+        self.didInsertListener = { [weak self] a, i in
+            guard let s = self else { return }
+            if let tableView: UITableView = s.tableView {
                 perform(animated: !disableAnimation) {
                     tableView.beginUpdates()
-                    tableView.insertRowsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: self.section) }, withRowAnimation: UITableViewRowAnimation.Automatic)
+                    tableView.insertRowsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: s.section) }, withRowAnimation: UITableViewRowAnimation.Automatic)
                     tableView.endUpdates()
                 }
             }
         }
         
-        self.didRemoveListener = { [unowned self] a, i in
-            if let tableView = self.tableView {
+        self.didRemoveListener = { [weak self] a, i in
+            guard let s = self else { return }
+            if let tableView = s.tableView {
                 perform(animated: !disableAnimation) {
                     tableView.beginUpdates()
-                    tableView.deleteRowsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: self.section) }, withRowAnimation: UITableViewRowAnimation.Automatic)
+                    tableView.deleteRowsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: s.section) }, withRowAnimation: UITableViewRowAnimation.Automatic)
                     tableView.endUpdates()
                 }
             }
         }
         
-        self.didUpdateListener = { [unowned self] a, i in
-            if let tableView = self.tableView {
+        self.didUpdateListener = { [weak self] a, i in
+            guard let s = self else { return }
+            if let tableView = s.tableView {
                 perform(animated: !disableAnimation) {
                     tableView.beginUpdates()
-                    tableView.reloadRowsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: self.section) }, withRowAnimation: UITableViewRowAnimation.Automatic)
+                    tableView.reloadRowsAtIndexPaths(i.map { NSIndexPath(forItem: $0, inSection: s.section) }, withRowAnimation: UITableViewRowAnimation.Automatic)
                     tableView.endUpdates()
                 }
             }
         }
         
         self.didResetListener = { [weak self] array in
-            if let tableView = self?.tableView {
-                tableView.reloadData()
-            }
+            self?.tableView?.reloadData()
         }
     }
     

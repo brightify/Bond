@@ -197,12 +197,12 @@ public class Dynamic<T>: Observable<T> {
     
     private override init() {
         super.init()
-        valueBond.listener = { [unowned self] in self.value = $0 }
+        valueBond.listener = { [weak self] in self?.value = $0 }
     }
     
     public override init(_ value: T) {
         super.init(value)
-        valueBond.listener = { [unowned self] in self.value = $0 }
+        valueBond.listener = { [weak self] in self?.value = $0 }
     }
     
 }
@@ -391,8 +391,9 @@ internal class AsyncMapProxyObservable<IN, OUT>: Observable<OUT>, Bondable {
     internal init(_ action: (IN, (OUT) -> ()) -> ()) {
         super.init()
         
-        inputBond.listener = { [unowned self] in
-            action($0, self.setOutputValue)
+        inputBond.listener = { [weak self] in
+            guard let s = self else { return }
+            action($0, s.setOutputValue)
         }
     }
     
@@ -412,8 +413,9 @@ internal class AsyncMapProxyObservableArray<IN, OUT>: ObservableArray<OUT>, Bond
     internal init(_ action: (IN, [OUT] -> ()) -> ()) {
         super.init([])
         
-        inputBond.listener = { [unowned self] in
-            action($0, self.setOutputValue)
+        inputBond.listener = { [weak self] in
+            guard let s = self else { return }
+            action($0, s.setOutputValue)
         }
     }
     
